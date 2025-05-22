@@ -1,0 +1,4 @@
+node_modules/
+dist/
+*.pid
+src/prompts/test_hello_prompt.json
