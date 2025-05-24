@@ -25,7 +25,7 @@ The MCP Prompt Server is a Node.js application that leverages the Model Context 
     * `get_all_tags`: Retrieves all tags and their usage frequency.
     * `get_all_categories`: Lists all categories and their usage frequency.
 * **TypeScript-Based:** Written in TypeScript for enhanced robustness and maintainability.
-* **Multiple Deployment Options:** Supports both traditional deployment using standard input/output and Cloudflare Workers deployment using HTTP API.
+* **Simple Deployment:** Supports local deployment with Express server for easy setup and testing.
 
 ## Project Structure
 
@@ -33,15 +33,15 @@ The MCP Prompt Server is a Node.js application that leverages the Model Context 
 mcp-prompt-server/
 ├── src/
 │   ├── index.ts         # Main server logic and tool definitions
-│   ├── api/             # HTTP API implementation for Cloudflare Workers
-│   ├── core/            # Core prompt service logic
+│   ├── api-adapter.js   # API adapter for Express server
+│   ├── config.ts        # Configuration management
 │   ├── storage/         # Storage interface implementations
 │   └── prompts/         # Directory containing prompt definition files (YAML)
-├── dist/                # Compiled JavaScript files (after build)
+├── public/              # Static files for web UI
+├── ui/                  # Frontend UI code
+├── server.js            # Express server implementation
 ├── package.json         # Project metadata and dependencies
 ├── tsconfig.json        # TypeScript compiler options
-├── tsconfig.workers.json # TypeScript compiler options for Cloudflare Workers
-├── wrangler.toml        # Cloudflare Workers configuration
 ├── README.md            # English README
 └── README_CN.md         # Chinese README
 ```
@@ -78,316 +78,216 @@ This command uses `tsc` (the TypeScript compiler) to compile files from `src/` t
 
 ## Running the Server
 
-### Traditional Deployment (Standard Input/Output)
-
 To start the MCP Prompt Server:
 
 ```bash
+npm run dev:full
+```
+
+This command will start both the backend server and the frontend UI development server. The backend server will run on port 9011 (or the port specified in your .env file), and the frontend UI will run on port 9010.
+
+You can also run the backend and frontend separately:
+
+```bash
+# Run only the backend server
+npm run dev
+
+# Run only the frontend UI
+npm run ui:dev
+```
+
+For production deployment, you can build the frontend and then start the server:
+
+```bash
+# Build the frontend
+npm run ui:build
+
+# Start the server
 npm start
 ```
 
-This command will first build the project (if not already built) and then run the server using `node dist/index.js`. The server will listen for MCP connections via standard input/output (stdio).
+### Using the API
 
-For development, you might also see a `dev` script using `nodemon` (e.g., `npm run dev`), but `npm start` is the standard way to run the production-ready server.
-
-### Cloudflare Workers Deployment (HTTP API)
-
-This project supports deployment to Cloudflare Workers, allowing you to leverage Cloudflare's global distributed network to run your MCP Prompt Server without managing server infrastructure. The Cloudflare Workers deployment uses HTTP API instead of standard input/output communication and uses Cloudflare KV as storage backend.
-
-**Key Benefits:**
-
-- **Global Distributed Deployment**: Leverage Cloudflare's global edge network for low-latency access
-- **No Server Management**: No need to maintain servers, operating systems, or other infrastructure
-- **Automatic Scaling**: Scales automatically based on traffic, no manual intervention required
-- **Persistent Storage**: Uses Cloudflare KV for storing prompts, no file system access needed
-
-#### Prerequisites for Cloudflare Workers Deployment
-
-1. A Cloudflare account
-2. Wrangler CLI installed: `npm install -g wrangler`
-3. Authenticate with Cloudflare: `wrangler login`
-
-#### Setting Up Cloudflare KV Namespace
-
-Create a KV namespace to store your prompts:
+Once the server is running, you can interact with your MCP Prompt Server via HTTP requests:
 
 ```bash
-wrangler kv:namespace create PROMPTS_KV
-```
-
-This will output a namespace ID. Update the `wrangler.toml` file with this ID:
-
-```toml
-[[kv_namespaces]]
-binding = "PROMPTS_KV"
-id = "your-kv-namespace-id-here" # Replace with the ID from the command output
-```
-
-For local development, create a preview namespace:
-
-```bash
-wrangler kv:namespace create PROMPTS_KV --preview
-```
-
-Update the `wrangler.toml` file with the preview ID as well:
-
-```toml
-[[kv_namespaces]]
-binding = "PROMPTS_KV"
-id = "your-kv-namespace-id-here"
-preview_id = "your-preview-kv-namespace-id-here" # Replace with the preview ID
-```
-
-#### Building and Deploying to Cloudflare Workers
-
-Build the project for Cloudflare Workers:
-
-```bash
-npm run build:worker
-```
-
-Run locally for development:
-
-```bash
-npm run dev:worker
-```
-
-Deploy to Cloudflare Workers:
-
-```bash
-npm run deploy:worker
-```
-
-#### Using the HTTP API
-
-Once deployed, you can interact with your MCP Prompt Server via HTTP requests:
-
-```bash
-curl -X POST https://your-worker-subdomain.workers.dev/ \
+curl -X POST http://localhost:9011/api/get_prompt_names \
   -H "Content-Type: application/json" \
-  -d '{"type":"request","id":"1","tool":"get_prompt_names","args":{}}'
+  -d '{}'
 ```
 
 This will return a JSON response with the available prompt names.
-- **HTTP API Interface**: Provides standard HTTP API for easy integration with other services
 
-#### Prerequisites
+### Using the Web UI
 
-1. **Register and Configure a Cloudflare Account**
-   - Register a [Cloudflare](https://dash.cloudflare.com/sign-up) account (if you don't have one)
-   - Log in to the [Cloudflare Dashboard](https://dash.cloudflare.com)
-   - In the sidebar, click on "Workers & Pages" to ensure your account has Workers enabled
+You can also use the web UI to manage your prompts. Open your browser and navigate to:
 
-2. **Install Project Dependencies**
-   ```bash
-   npm install
-   ```
-   This will install all required dependencies, including the Wrangler CLI.
+```
+http://localhost:9010
+```
 
-3. **Log in to Wrangler**
-   ```bash
-   npx wrangler login
-   ```
-   This will open a browser and guide you through the authentication process for your Cloudflare account.
+The web UI provides a user-friendly interface for managing prompts, categories, and tags.
 
-#### Creating KV Namespaces
 
-**What is Cloudflare KV?**
 
-Cloudflare KV (Key-Value) is a globally distributed key-value storage system used for storing data in Cloudflare Workers. In our project, KV storage is used as a replacement for the file system to store all prompt definitions.
+## Configuration
 
-**Create Production Environment KV Namespace**
-
-Run the following command to create a KV namespace for the production environment:
+The MCP Prompt Server uses a `.env` file for configuration. You can copy the `.env.example` file to create your own `.env` file:
 
 ```bash
-npx wrangler kv:namespace create PROMPTS_KV
+cp .env.example .env
 ```
 
-After running, you'll see output similar to:
+The main configuration options include:
 
-```
-✅ Created namespace "PROMPTS_KV" with ID "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-```
+- **PORT**: The port for the backend server (default: 9011)
+- **HOST**: The host for the backend server (default: localhost)
+- **FRONTEND_PORT**: The port for the frontend development server (default: 9010)
+- **STORAGE_TYPE**: The storage type to use (currently only supports 'file')
+- **PROMPTS_DIR**: The directory to store prompt files (default: ./prompts)
+- **PROMPTS_FILE**: The file to store prompts (default: prompts.json)
 
-**Update Configuration File**
+## Development
 
-Copy the ID from the output and edit the `wrangler.toml` file, replacing `your-kv-namespace-id-here` with the actual ID:
-
-```toml
-[[kv_namespaces]]
-binding = "PROMPTS_KV"
-id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" # Replace with your actual ID
-```
-
-**Create Development Environment KV Namespace**
-
-Similarly, create a preview KV namespace for local development:
-
+For development, you can use the following commands:
 ```bash
-npx wrangler kv:namespace create PROMPTS_KV --preview
+# Run the server with nodemon for auto-reloading
+npm run dev
+
+# Run the frontend UI development server
+npm run ui:dev
+
+# Run both backend and frontend together
+npm run dev:full
 ```
-
-And replace the ID in the `wrangler.toml` file for `your-preview-kv-namespace-id-here`:
-
-```toml
-[[kv_namespaces]]
-binding = "PROMPTS_KV"
-id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" # Production environment ID
-preview_id = "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy" # Development environment ID
-```
-
-**Why Two KV Namespaces?**
-
-- **Production Environment ID**: Used for actual deployment to Cloudflare Workers production environment
-- **Preview ID**: Used for local development and testing, doesn't affect production data
-
-#### Local Development
-
-**Build and Run Local Development Server**
-
-Run the following command to develop and test the Cloudflare Workers version locally:
-
-```bash
-npm run dev:worker
-```
-
-This command will:
-1. First build the project (`npm run build:worker`)
-2. Then start a local development server using Wrangler
 
 After the server starts, you'll see output similar to:
 
 ```
-[wrangler] Ready on http://localhost:8787
+MCP Prompt Server 正在运行，端口: 9011
+访问 http://localhost:9011 使用 Web UI
 ```
 
-You can now access http://localhost:8787 in your browser to test your API.
+You can now access http://localhost:9011 in your browser to use the server, or http://localhost:9010 to use the development UI.
 
-**Managing Prompts During Development**
+**Managing Prompts**
 
-During development, you may need to upload prompts to the KV storage. You can use the API or directly use the Wrangler CLI:
+During development, you can manage prompts using the web UI or the API:
+
+1. Using the Web UI: Navigate to http://localhost:9010 and use the interface to add, update, or delete prompts.
+
+2. Using the API: Send HTTP requests to the server to manage prompts:
 
 ```bash
-# Using Wrangler to upload prompts to KV storage
-# Format: npx wrangler kv:key put --binding=PROMPTS_KV --preview "key" "value"
-
-# For example, uploading a prompt (assuming the prompt content is saved in a prompt.yaml file)
-npx wrangler kv:key put --binding=PROMPTS_KV --preview "prompts:example_prompt" "$(cat prompt.yaml)"
+# Add a new prompt
+curl -X POST http://localhost:9011/api/add_new_prompt \
+  -H "Content-Type: application/json" \
+  -d '{"name":"example_prompt","description":"An example prompt","category":"Examples","tags":["example","demo"],"messages":[{"role":"system","content":"You are a helpful assistant."}]}'
 ```
 
 **Debugging Tips**
 
 - During local development, you can see log output in the console
 - Use `console.log()` to debug your code
-- If you make changes to the KV storage, you may need to restart the development server
+- The server uses nodemon, so it will automatically restart when you make changes to the code
 
-#### Deploying to Cloudflare Workers
+## Production Deployment
 
-**Build and Deploy**
-
-When you're ready to deploy to the production environment, run:
+For production deployment, you can build the frontend and then start the server:
 
 ```bash
-npm run deploy:worker
+# Build the frontend
+npm run ui:build
+
+# Start the server
+npm start
 ```
 
-This command will:
-1. First build the project (`npm run build:worker`)
-2. Then deploy the project to Cloudflare Workers using Wrangler
+This will build the frontend UI and place it in the `public` directory, which will be served by the Express server.
 
-After successful deployment, you'll see output similar to:
+## API Reference
 
-```
-Published mcp-prompt-server (WORKER_ID)
-  https://mcp-prompt-server.your-subdomain.workers.dev
-```
+The MCP Prompt Server provides a RESTful API for managing prompts. All API endpoints use JSON for requests and responses.
 
-**Managing Prompts in Production**
-
-After deployment, you need to upload prompts to the production environment's KV storage. You can use the API or directly use the Wrangler CLI:
-
-```bash
-# Using Wrangler to upload prompts to production KV storage
-# Note the removal of the --preview flag
-
-# For example, uploading a prompt (assuming the prompt content is saved in a prompt.yaml file)
-npx wrangler kv:key put --binding=PROMPTS_KV "prompts:example_prompt" "$(cat prompt.yaml)"
-```
-
-**Custom Domain**
-
-If you want to use a custom domain instead of the default domain provided by Cloudflare, you can configure it in the Cloudflare Dashboard:
-
-1. Log in to the [Cloudflare Dashboard](https://dash.cloudflare.com)
-2. Select "Workers & Pages" > Your Worker
-3. Click on the "Triggers" tab
-4. Add your domain in the "Custom Domains" section
-
-#### Using the HTTP API
-
-**API Overview**
-
-The Cloudflare Workers deployment uses HTTP API instead of standard input/output. All API requests and responses use JSON format. Here are the available API endpoints:
+### API Endpoints
 
 | Endpoint | Method | Description |
 |---------|------|------|
-| `/health` | GET | Health check to verify the service is running properly |
 | `/api/get_prompt_names` | POST | Get all available prompt names |
-| `/api/reload_prompts` | POST | Reload all prompts |
+| `/api/search_prompts` | POST | Search prompts with filtering and pagination |
+| `/api/get_prompt_details` | POST | Get details of a specific prompt |
 | `/api/add_new_prompt` | POST | Add a new prompt |
 | `/api/update_prompt` | POST | Update an existing prompt |
 | `/api/delete_prompt` | POST | Delete a prompt |
-| `/api/{prompt_name}` | POST | Process a specific prompt, where `{prompt_name}` is the name of the prompt |
+| `/api/get_all_categories` | POST | Get all categories |
+| `/api/get_all_tags` | POST | Get all tags |
+| `/api/get_settings` | POST | Get server settings |
+| `/api/update_settings` | POST | Update server settings |
 
-**Request and Response Examples**
+### Request and Response Examples
 
-1. **Health Check**
+1. **Get Prompt Names**
 
    ```bash
-   curl https://mcp-prompt-server.your-subdomain.workers.dev/health
+   curl -X POST http://localhost:9011/api/get_prompt_names \
+     -H "Content-Type: application/json" \
+     -d '{}'
    ```
 
    Response:
    ```json
    {
-     "status": "ok",
-     "version": "1.0.0"
+     "promptNames": ["general_assistant", "code_assistant", "writing_assistant"]
    }
    ```
 
-2. **Get Prompt Names**
+2. **Search Prompts**
 
    ```bash
-   curl -X POST https://mcp-prompt-server.your-subdomain.workers.dev/api/get_prompt_names
+   curl -X POST http://localhost:9011/api/search_prompts \
+     -H "Content-Type: application/json" \
+     -d '{
+       "query": "code",
+       "page": 1,
+       "pageSize": 10
+     }'
    ```
 
    Response:
    ```json
    {
-     "promptNames": ["writing_assistant", "code_reviewer", "test_greeting"]
+     "prompts": [
+       {
+         "name": "code_assistant",
+         "description": "代码助手提示词，用于编程和代码相关问题",
+         "category": "编程",
+         "tags": ["代码", "编程", "开发"]
+       }
+     ],
+     "total": 1,
+     "page": 1,
+     "pageSize": 10
    }
    ```
 
 3. **Add New Prompt**
 
    ```bash
-   curl -X POST https://mcp-prompt-server.your-subdomain.workers.dev/api/add_new_prompt \
+   curl -X POST http://localhost:9011/api/add_new_prompt \
      -H "Content-Type: application/json" \
      -d '{
        "name": "test_greeting",
        "description": "A simple greeting prompt",
-       "arguments": [
-         { "name": "user_name", "description": "Username" },
-         { "name": "time_of_day", "description": "Time of day (e.g., morning, afternoon)" }
+       "category": "Examples",
+       "tags": ["greeting", "example"],
+       "parameters": [
+         { "name": "user_name", "type": "string", "description": "Username", "required": true },
+         { "name": "time_of_day", "type": "string", "description": "Time of day", "required": false, "default": "morning" }
        ],
        "messages": [
          {
-           "role": "user",
-           "content": {
-             "type": "text",
-             "text": "Good {{time_of_day}}, {{user_name}}! Hope you're having a great day."
-           }
+           "role": "system",
+           "content": "Good {{time_of_day}}, {{user_name}}! Hope you're having a great day."
          }
        ]
      }'
@@ -396,27 +296,38 @@ The Cloudflare Workers deployment uses HTTP API instead of standard input/output
    Response:
    ```json
    {
-     "success": true,
-     "message": "Prompt 'test_greeting' added successfully"
+     "success": true
    }
    ```
 
-4. **Process Prompt**
+4. **Get Prompt Details**
 
    ```bash
-   curl -X POST https://mcp-prompt-server.your-subdomain.workers.dev/api/test_greeting \
+   curl -X POST http://localhost:9011/api/get_prompt_details \
      -H "Content-Type: application/json" \
      -d '{
-       "user_name": "John",
-       "time_of_day": "afternoon"
+       "name": "code_assistant"
      }'
    ```
 
    Response:
    ```json
    {
-     "result": "Good afternoon, John! Hope you're having a great day.",
-     "promptName": "test_greeting"
+     "prompt": {
+       "name": "code_assistant",
+       "description": "代码助手提示词，用于编程和代码相关问题",
+       "category": "编程",
+       "tags": ["代码", "编程", "开发"],
+       "parameters": [],
+       "messages": [
+         {
+           "role": "system",
+           "content": "你是一个专业的编程助手，能够帮助用户解决各种编程问题，提供代码示例和解释。"
+         }
+       ],
+       "createdAt": "2025-05-24T14:42:31.123Z",
+       "updatedAt": "2025-05-24T14:42:31.123Z"
+     }
    }
    ```
 
@@ -425,21 +336,21 @@ The Cloudflare Workers deployment uses HTTP API instead of standard input/output
 You can integrate the MCP Prompt Server API with any programming language or tool that supports HTTP requests. Here's a simple integration example using JavaScript:
 
 ```javascript
-async function processPrompt(promptName, args) {
-  const response = await fetch(`https://mcp-prompt-server.your-subdomain.workers.dev/api/${promptName}`, {
+async function getPrompts() {
+  const response = await fetch('http://localhost:9011/api/get_prompt_names', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(args),
+    body: JSON.stringify({}),
   });
   
   return await response.json();
 }
 
 // Usage example
-processPrompt('test_greeting', { user_name: 'Jane', time_of_day: 'morning' })
-  .then(result => console.log(result))
+getPrompts()
+  .then(result => console.log(result.promptNames))
   .catch(error => console.error('Error:', error));
 ```
 
@@ -448,110 +359,110 @@ processPrompt('test_greeting', { user_name: 'Jane', time_of_day: 'morning' })
 In a production environment, you may want to add authentication and authorization mechanisms to your API. This can be achieved through:
 
 1. Using API keys: Add authorization tokens in request headers
-2. Using Cloudflare Access or similar services to protect your API
-3. Implementing IP whitelisting or other access control mechanisms
+2. Implementing IP whitelisting or other access control mechanisms
+3. Setting up HTTPS for secure communication
 
 ## Prompts
 
-Prompts define the tasks and instructions for the LLM. They are stored as individual YAML files in the `src/prompts/` directory.
+## 提示词管理
 
-### Prompt Structure
+提示词是用于引导 LLM（大型语言模型）执行特定任务的指令集合。在 MCP Prompt Server 中，提示词以 JSON 格式存储在内存中，并可以通过 API 进行管理。
 
-Each prompt file defines the following fields:
+### 提示词结构
 
-* `name` (string, required): A unique identifier for the prompt. This name is also used for the generated MCP tool.
-* `description` (string, optional): A human-readable description of what the prompt does.
-* `arguments` (array of objects, optional): Defines the input arguments the prompt expects. Each argument object has:
-  * `name` (string, required): The name of the argument.
-  * `description` (string, optional): A description of the argument.
-* `messages` (array of objects, required): Defines the conversation structure. Each message object has:
-  * `role` (string, required): The role of the speaker (e.g., "user", "assistant", "system").
-  * `content` (object, required): The content of the message. For text-based prompts, this is typically:
-    * `type`: "text"
-    * `text`: The message string, which can include `{{argument_name}}` placeholders for argument substitution.
+每个提示词包含以下字段：
 
-**Example (`example_prompt.yaml`):**
-```yaml
-name: example_greeting
-description: Greets a user with a custom message.
-arguments:
-  - name: user_name
-    description: The name of the user to greet.
-  - name: time_of_day
-    description: The time of day (e.g., morning, afternoon).
-messages:
-  - role: user
-    content:
-      type: text
-      text: "Good {{time_of_day}}, {{user_name}}! I hope you are having a wonderful day."
+* `name` (string, 必需): 提示词的唯一标识符。
+* `description` (string, 可选): 提示词的描述信息。
+* `category` (string, 可选): 提示词所属的类别。
+* `tags` (array of strings, 可选): 与提示词相关的标签。
+* `parameters` (array of objects, 可选): 提示词的参数定义。每个参数对象包含：
+  * `name` (string, 必需): 参数名称。
+  * `type` (string, 必需): 参数类型，如 "string"、"number"、"boolean" 等。
+  * `description` (string, 可选): 参数描述。
+  * `required` (boolean, 可选): 参数是否必需。
+  * `default` (any, 可选): 参数的默认值。
+* `messages` (array of objects, 必需): 定义对话结构。每个消息对象包含：
+  * `role` (string, 必需): 发言者的角色（如 "system"、"user"、"assistant"）。
+  * `content` (string, 必需): 消息内容，可以包含 `{{parameter_name}}` 形式的参数占位符。
+* `createdAt` (string, 自动生成): 提示词创建时间。
+* `updatedAt` (string, 自动生成): 提示词最后更新时间。
+
+**示例：**
+
+```json
+{
+  "name": "general_assistant",
+  "description": "通用助手提示词，用于日常对话和问答",
+  "category": "通用",
+  "tags": ["对话", "助手", "基础"],
+  "parameters": [
+    {
+      "name": "username",
+      "type": "string",
+      "description": "用户名称",
+      "required": false,
+      "default": "用户"
+    }
+  ],
+  "messages": [
+    {
+      "role": "system",
+      "content": "你是一个有用的AI助手，能够回答{{username}}的各种问题并提供帮助。"
+    }
+  ],
+  "createdAt": "2025-05-24T14:42:31.123Z",
+  "updatedAt": "2025-05-24T14:42:31.123Z"
+}
 ```
 
-### Default Prompts
+### 默认提示词
 
-The server comes with a variety of pre-defined prompts in `src/prompts/`, including:
-* `writing_assistant.yaml`
-* `code_refactoring.yaml`
-* `test_case_generator.yaml`
-* `api_documentation.yaml`
-* *(And many others...)*
+MCP Prompt Server 内置了几个默认提示词：
 
-## Available MCP Tools
+* `general_assistant`: 通用助手提示词，用于日常对话和问答
+* `code_assistant`: 代码助手提示词，用于编程和代码相关问题
+* `writing_assistant`: 写作助手提示词，用于文章创作和内容优化
 
-Once the server is running, it provides several MCP tools:
+## 管理功能
 
-1. **Prompt Tools:** Each prompt loaded from the `src/prompts/` directory becomes a callable tool, named after the prompt's `name`.
-   * **Input:** An object where keys are argument names defined in the prompt's `arguments` section.
-   * **Output:** The processed prompt text after substituting the provided arguments.
+MCP Prompt Server 提供了一系列 API 管理功能，用于管理提示词、类别和标签。
 
-2. **Management Tools:**
-   * **`get_prompt_names`**
-     * **Description:** Retrieves a list of all currently loaded and available prompt names.
-     * **Input:** None.
-     * **Output:** A list of prompt names.
+### 提示词管理
 
-   * **`reload_prompts`**
-     * **Description:** Reloads all prompt definition files from the `src/prompts/` directory. This is useful if you've manually added, removed, or modified prompt files while the server is running.
-     * **Input:** None.
-     * **Output:** A message indicating the number of prompts successfully reloaded.
+* **获取提示词列表** (`get_prompt_names`)
+  * **输入：** 可选的类别和标签过滤器
+  * **输出：** 可用提示词名称列表
 
-   * **`add_new_prompt`**
-     * **Description:** Dynamically adds a new prompt to the server and makes it available as a tool without needing a manual file creation and server restart.
-     * **Input Schema:** An object with the following properties:
-       * `name` (string, required): The unique name for the new prompt. This will also be the filename (e.g., "my_prompt" becomes "my_prompt.yaml") and the MCP tool name.
-       * `description` (string, optional): A description for the prompt.
-       * `arguments` (array of objects, optional): Each object defining an argument with `name` (string, required) and `description` (string, optional).
-       * `messages` (array of objects, required): Each object defining a message with `role` (string, required: "user", "assistant", or "system") and `content` (object, required: `{ type: "text", text: "..." }`).
-     * **Example Input for `add_new_prompt`:**
-       ```yaml
-       name: custom_task_explainer
-       description: Explains a custom task based on provided details.
-       arguments:
-         - name: task_name
-           description: Name of the task
-         - name: task_details
-           description: Specific details about the task
-       messages:
-         - role: user
-           content:
-             type: text
-             text: Please explain the task '{{task_name}}'. Here are the details: {{task_details}}
-         - role: assistant
-           content:
-             type: text
-             text: Okay, I will explain {{task_name}}.
-       ```
-     * **Output:** A success message indicating the prompt has been added and loaded, or an error message if it fails.
-     * **Usage:**
-       1. Prepare your prompt definition, including name, description, arguments, and messages.
-       2. Call the `add_new_prompt` tool, passing in your prompt definition.
-       3. The server will automatically create a new YAML file, saving it to the `src/prompts` directory.
-       4. The server will automatically reload all prompts, making the newly added prompt immediately available.
-       5. You can immediately use the newly added prompt without restarting the server.
-     * **Notes:**
-       * The prompt name must be unique; if a prompt with the same name already exists, the add operation will fail.
-       * The prompt file will be saved in YAML format, consistent with the format of other prompts in the project.
-       * After adding a prompt, you can use the `get_prompt_names` tool to verify that the new prompt has been successfully loaded.
-       * If you need to modify an existing prompt, use the `update_prompt` tool instead of `add_new_prompt`.
+* **搜索提示词** (`search_prompts`)
+  * **输入：** 搜索查询、类别过滤器、标签过滤器、分页参数
+  * **输出：** 匹配的提示词列表，包含元数据
+
+* **获取提示词详情** (`get_prompt_details`)
+  * **输入：** 要检索的提示词名称
+  * **输出：** 完整的提示词定义，包括所有元数据和消息
+
+* **添加新提示词** (`add_new_prompt`)
+  * **输入：** 完整的提示词定义
+  * **输出：** 确认提示词已添加的成功消息
+
+* **更新提示词** (`update_prompt`)
+  * **输入：** 要更新的提示词名称和更新后的提示词定义
+  * **输出：** 确认提示词已更新的成功消息
+
+* **删除提示词** (`delete_prompt`)
+  * **输入：** 要删除的提示词名称
+  * **输出：** 确认提示词已删除的成功消息
+
+### 类别和标签管理
+
+* **获取所有类别** (`get_all_categories`)
+  * **输入：** 无
+  * **输出：** 所有可用类别的列表
+
+* **获取所有标签** (`get_all_tags`)
+  * **输入：** 无
+  * **输出：** 所有可用标签的列表
 
 ## Contributing
 

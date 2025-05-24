@@ -20,9 +20,13 @@ MCP Prompt 服务器是一个 Node.js 应用程序，它利用模型上下文协
 ```
 mcp-prompt-server/
 ├── src/
-│   ├── index.ts         # 主要服务器逻辑和工具定义
-│   └── prompts/         # 包含提示定义文件 (YAML) 的目录
-├── dist/                # 编译后的 JavaScript 文件 (构建后)
+│   ├── api-adapter.js    # API 适配器，用于处理前端请求
+│   ├── config.ts         # 配置管理
+│   ├── storage/          # 存储接口实现
+│   └── prompts/          # 提示词存储目录
+├── public/              # 静态文件目录，用于前端界面
+├── ui/                  # 前端代码
+├── server.js            # Express 服务器入口文件
 ├── package.json         # 项目元数据和依赖项
 ├── tsconfig.json        # TypeScript 编译器选项
 ├── README.md            # 英文版 README
@@ -61,7 +65,7 @@ mcp-prompt-server/
 
 ## 环境配置
 
-项目支持两种存储方式：文件存储和 Supabase 数据库存储。下面是设置环境的步骤：
+项目使用文件存储方式，下面是设置环境的步骤：
 
 ### 1. 创建环境变量文件
 
@@ -77,76 +81,16 @@ cp .env.example .env
 
 ```
 # 服务器配置
-PORT=14246
+PORT=9011
 HOST=localhost
 
+# 前端配置
+FRONTEND_PORT=9010
+
 # 存储配置
-# 可选值： file (文件存储), cloudflare_kv (Cloudflare KV), supabase (Supabase 数据库)
-STORAGE_TYPE=supabase
-
-# Supabase 配置
-# 如果使用 Supabase，请填写以下信息
-SUPABASE_URL=https://your-project-id.supabase.co
-SUPABASE_KEY=your-supabase-api-key
-```
-
-### 3. Supabase 数据库初始化
-
-如果您选择使用 Supabase 作为存储方式，需要在 Supabase 中创建必要的数据库表。请登录 [Supabase 控制台](https://app.supabase.com)，选择您的项目，然后在 SQL 编辑器中执行以下 SQL 语句：
-
-```sql
--- 创建 UUID 扩展
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- 创建类别表
-CREATE TABLE IF NOT EXISTS categories (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  name TEXT NOT NULL UNIQUE,
-  description TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- 创建提示词表
-CREATE TABLE IF NOT EXISTS prompts (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  name TEXT NOT NULL UNIQUE,
-  content TEXT NOT NULL,
-  description TEXT,
-  category_id UUID REFERENCES categories(id),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- 创建标签表
-CREATE TABLE IF NOT EXISTS tags (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  name TEXT NOT NULL UNIQUE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- 创建提示词-标签关联表
-CREATE TABLE IF NOT EXISTS prompt_tags (
-  prompt_id UUID REFERENCES prompts(id) ON DELETE CASCADE,
-  tag_id UUID REFERENCES tags(id) ON DELETE CASCADE,
-  PRIMARY KEY (prompt_id, tag_id)
-);
-
--- 创建设置表
-CREATE TABLE IF NOT EXISTS settings (
-  key TEXT PRIMARY KEY,
-  value JSONB NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- 添加默认设置
-INSERT INTO settings (key, value) 
-VALUES ('default_settings', '{"version": "1.0.0"}') 
-ON CONFLICT (key) DO NOTHING;
-```
-
-执行完这些 SQL 语句后，您应该会看到 "Success. No rows returned" 的消息，表示表已成功创建。
+STORAGE_TYPE=file
+PROMPTS_DIR=./prompts
+PROMPTS_FILE=prompts.json
 
 # 日志配置
 LOG_LEVEL=info
@@ -154,39 +98,135 @@ LOG_REQUESTS=true
 
 # 缓存配置
 CACHE_ENABLED=true
-CACHE_TTL=300
 ```
-
-### 3. Supabase 设置（如果使用 Supabase 存储）
-
-如果您选择使用 Supabase 作为存储后端，请按照以下步骤进行设置：
-
-1. **创建 Supabase 账户和项目**
-   - 注册 [Supabase](https://supabase.com/) 账户
-   - 创建新项目
-   - 复制项目 URL 和 API 密钥（在项目设置 > API 中找到）
-
-2. **更新环境变量**
-   - 将您的 Supabase URL 和 API 密钥添加到 `.env` 文件中
-   - 将 `STORAGE_TYPE` 设置为 `supabase`
-
-3. **初始化数据库**
-   - 运行以下命令创建必要的表和函数：
-   ```bash
-   npm run prepare-db
-   ```
-   这个命令会自动创建必要的数据库表和函数，包括提示词、类别、标签等。
-
-## 构建项目
-
-项目使用 TypeScript 编写，需要编译成 JavaScript：
-
-```bash
-npm run build
-```
-此命令使用 `tsc` (TypeScript 编译器) 将 `src/` 目录下的文件编译到 `dist/` 目录，具体配置在 `tsconfig.json` 中。
 
 ## 运行服务器
+
+运行 MCP Prompt 服务器：
+
+```bash
+# 同时运行后端服务器和前端 UI
+npm run dev:full
+```
+
+这个命令会启动后端服务器和前端 UI 开发服务器。后端服务器将在端口 9011（或您在 .env 文件中指定的端口）上运行，前端 UI 将在端口 9010 上运行。
+
+您也可以分别运行后端和前端：
+
+```bash
+# 只运行后端服务器
+npm run dev
+
+# 只运行前端 UI
+npm run ui:dev
+```
+
+对于生产部署，您可以构建前端然后启动服务器：
+
+```bash
+# 构建前端
+npm run ui:build
+
+# 启动服务器
+npm start
+```
+
+这将构建前端 UI 并将其放在 `public` 目录中，该目录将由 Express 服务器提供服务。
+
+### 使用 API
+
+服务器运行后，您可以通过 HTTP 请求与 MCP Prompt 服务器交互：
+
+```bash
+curl -X POST http://localhost:9011/api/get_prompt_names \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+这将返回一个包含可用提示词名称的 JSON 响应。
+
+### 使用 Web UI
+
+您也可以使用 Web UI 来管理您的提示词。打开浏览器并导航到：
+
+```
+http://localhost:9010
+```
+
+Web UI 提供了一个用户友好的界面，用于管理提示词、类别和标签。
+
+
+## 提示词管理
+
+提示词是用于引导 LLM（大型语言模型）执行特定任务的指令集合。在 MCP Prompt Server 中，提示词以 JSON 格式存储在内存中，并可以通过 API 进行管理。
+
+### 提示词结构
+
+每个提示词包含以下字段：
+
+* `name` (string, 必需): 提示词的唯一标识符。
+* `description` (string, 可选): 提示词的描述信息。
+* `category` (string, 可选): 提示词所属的类别。
+* `tags` (array of strings, 可选): 与提示词相关的标签。
+* `parameters` (array of objects, 可选): 提示词的参数定义。每个参数对象包含：
+  * `name` (string, 必需): 参数名称。
+  * `type` (string, 必需): 参数类型，如 "string"、"number"、"boolean" 等。
+  * `description` (string, 可选): 参数描述。
+  * `required` (boolean, 可选): 参数是否必需。
+  * `default` (any, 可选): 参数的默认值。
+* `messages` (array of objects, 必需): 定义对话结构。每个消息对象包含：
+  * `role` (string, 必需): 发言者的角色（如 "system"、"user"、"assistant"）。
+  * `content` (string, 必需): 消息内容，可以包含 `{{parameter_name}}` 形式的参数占位符。
+* `createdAt` (string, 自动生成): 提示词创建时间。
+* `updatedAt` (string, 自动生成): 提示词最后更新时间。
+
+### 默认提示词
+
+MCP Prompt Server 内置了几个默认提示词：
+
+* `general_assistant`: 通用助手提示词，用于日常对话和问答
+* `code_assistant`: 代码助手提示词，用于编程和代码相关问题
+* `writing_assistant`: 写作助手提示词，用于文章创作和内容优化
+
+## 管理功能
+
+MCP Prompt Server 提供了一系列 API 管理功能，用于管理提示词、类别和标签。
+
+### 提示词管理
+
+* **获取提示词列表** (`get_prompt_names`)
+  * **输入：** 可选的类别和标签过滤器
+  * **输出：** 可用提示词名称列表
+
+* **搜索提示词** (`search_prompts`)
+  * **输入：** 搜索查询、类别过滤器、标签过滤器、分页参数
+  * **输出：** 匹配的提示词列表，包含元数据
+
+* **获取提示词详情** (`get_prompt_details`)
+  * **输入：** 要检索的提示词名称
+  * **输出：** 完整的提示词定义，包括所有元数据和消息
+
+* **添加新提示词** (`add_new_prompt`)
+  * **输入：** 完整的提示词定义
+  * **输出：** 确认提示词已添加的成功消息
+
+* **更新提示词** (`update_prompt`)
+  * **输入：** 要更新的提示词名称和更新后的提示词定义
+  * **输出：** 确认提示词已更新的成功消息
+
+* **删除提示词** (`delete_prompt`)
+  * **输入：** 要删除的提示词名称
+  * **输出：** 确认提示词已删除的成功消息
+
+### 类别和标签管理
+
+* **获取所有类别** (`get_all_categories`)
+  * **输入：** 无
+  * **输出：** 所有可用类别的列表
+
+* **获取所有标签** (`get_all_tags`)
+  * **输入：** 无
+  * **输出：** 所有可用标签的列表
 
 ### 运行服务器和 UI
 
