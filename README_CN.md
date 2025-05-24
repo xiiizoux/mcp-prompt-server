@@ -6,7 +6,7 @@ MCP Prompt 服务器是一个 Node.js 应用程序，它利用模型上下文协
 
 ## 特性
 
-*   **动态提示加载：** 从位于 `src/prompts` 目录中的 YAML 或 JSON 文件加载提示定义。
+*   **动态提示加载：** 从位于 `src/prompts` 目录中的 YAML 文件加载提示定义。
 *   **MCP 工具暴露：** 每个加载的提示都会自动作为单独的 MCP 工具公开。
 *   **管理工具：**
     *   `get_prompt_names`：列出所有当前可用的提示工具。
@@ -21,7 +21,7 @@ MCP Prompt 服务器是一个 Node.js 应用程序，它利用模型上下文协
 mcp-prompt-server/
 ├── src/
 │   ├── index.ts         # 主要服务器逻辑和工具定义
-│   └── prompts/         # 包含提示定义文件 (YAML/JSON) 的目录
+│   └── prompts/         # 包含提示定义文件 (YAML) 的目录
 ├── dist/                # 编译后的 JavaScript 文件 (构建后)
 ├── package.json         # 项目元数据和依赖项
 ├── tsconfig.json        # TypeScript 编译器选项
@@ -59,6 +59,8 @@ npm run build
 
 ## 运行服务器
 
+### 传统部署方式（基于标准输入/输出）
+
 启动 MCP Prompt 服务器：
 
 ```bash
@@ -68,13 +70,105 @@ npm start
 
 对于开发，您可能还会看到一个使用 `nodemon` 的 `dev` 脚本 (例如 `npm run dev`)，但 `npm start` 是运行生产就绪服务器的标准方式。
 
+### Cloudflare Workers 部署方式（基于 HTTP API）
+
+本项目支持部署到 Cloudflare Workers，这使得您可以利用 Cloudflare 的全球分布式网络运行您的 MCP Prompt 服务器，无需管理服务器基础设施。
+
+#### 前期准备
+
+1. 注册 [Cloudflare](https://dash.cloudflare.com/sign-up) 账户（如果您还没有）
+2. 安装 Wrangler CLI（已包含在项目依赖中）：
+   ```bash
+   npm install
+   ```
+
+#### 创建 KV 命名空间
+
+Cloudflare Workers 部署使用 Cloudflare KV 存储提示词，因此您需要创建一个 KV 命名空间：
+
+```bash
+npx wrangler kv:namespace create PROMPTS_KV
+```
+
+运行后，您将看到类似于以下的输出：
+
+```
+✅ Created namespace "PROMPTS_KV" with ID "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+```
+
+复制这个 ID，然后编辑 `wrangler.toml` 文件，将 `your-kv-namespace-id-here` 替换为实际的 ID。
+
+同样，创建一个用于本地开发的预览 KV 命名空间：
+
+```bash
+npx wrangler kv:namespace create PROMPTS_KV --preview
+```
+
+并将输出的 ID 替换到 `wrangler.toml` 文件中的 `your-preview-kv-namespace-id-here`。
+
+#### 本地开发
+
+运行以下命令在本地开发和测试 Cloudflare Workers 版本：
+
+```bash
+npm run dev:worker
+```
+
+这将启动一个本地开发服务器，通常在 http://localhost:8787 上运行。
+
+#### 部署到 Cloudflare Workers
+
+当您准备好部署时，运行以下命令：
+
+```bash
+npm run deploy:worker
+```
+
+部署成功后，您将收到一个 URL，例如 `https://mcp-prompt-server.your-subdomain.workers.dev`。
+
+#### 使用 HTTP API
+
+Cloudflare Workers 部署使用 HTTP API 而不是标准输入/输出。以下是可用的 API 端点：
+
+1. **健康检查**：`GET /health`
+2. **获取提示词名称**：`POST /api/get_prompt_names`
+3. **重新加载提示词**：`POST /api/reload_prompts`
+4. **添加新提示词**：`POST /api/add_new_prompt`
+5. **更新提示词**：`POST /api/update_prompt`
+6. **删除提示词**：`POST /api/delete_prompt`
+7. **处理提示词**：`POST /api/{prompt_name}`
+
+示例请求（添加新提示词）：
+
+```bash
+curl -X POST https://mcp-prompt-server.your-subdomain.workers.dev/api/add_new_prompt \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "test_greeting",
+    "description": "一个简单的问候提示词",
+    "arguments": [
+      { "name": "user_name", "description": "用户名" },
+      { "name": "time_of_day", "description": "一天中的时间 (例如: 早上, 下午)" }
+    ],
+    "messages": [
+      {
+        "role": "user",
+        "content": {
+          "type": "text",
+          "text": "{{time_of_day}}好，{{user_name}}！希望你今天过得愉快。"
+        }
+      }
+    ]
+  }'
+```
+
 ## Prompts (提示)
 
-提示定义了 LLM 的任务和指令。它们作为单独的 YAML 或 JSON 文件存储在 `src/prompts/` 目录中。
+提示定义了 LLM 的任务和指令。它们作为单独的 YAML 文件存储在 `src/prompts/` 目录中。
 
 ### Prompt 结构
 
-每个提示文件定义以下字段：
+每个提示文件以 YAML 格式定义以下字段：
 
 *   `name` (字符串, 必填): 提示的唯一标识符。此名称也用于生成的 MCP 工具。
 *   `description` (字符串, 可选): 对提示功能的易读描述。
@@ -102,7 +196,7 @@ messages:
       type: text
       text: "Good {{time_of_day}}, {{user_name}}! I hope you are having a wonderful day."
 ```
-*(注意：YAML/JSON 中的内容，如 `description` 和 `text` 字段中的英文示例，通常保持原文，除非特定要求翻译它们以用于纯中文环境下的模板。此处保持英文以确保模板的直接可用性。)*
+*(注意：YAML 中的内容，如 `description` 和 `text` 字段中的英文示例，通常保持原文，除非特定要求翻译它们以用于纯中文环境下的模板。此处保持英文以确保模板的直接可用性。)*
 
 ### 默认 Prompts
 
@@ -128,14 +222,14 @@ messages:
         *   **输出:** 提示名称列表。
 
     *   **`reload_prompts`**
-        *   **描述:** 从 `src/prompts/` 目录重新加载所有提示定义文件。如果您在服务器运行时手动添加、删除或修改了提示文件，此功能非常有用。
+        *   **描述:** 从 `src/prompts/` 目录重新加载所有 YAML 提示定义文件。如果您在服务器运行时手动添加、删除或修改了提示文件，此功能非常有用。
         *   **输入:** 无。
         *   **输出:** 一条消息，指示成功重新加载的提示数量。
 
     *   **`add_new_prompt`**
         *   **描述:** 动态向服务器添加新提示，并使其作为工具可用，无需手动创建文件和重新启动服务器。
         *   **输入模式:** 具有以下属性的对象：
-            *   `name` (字符串, 必填): 新提示的唯一名称。这也将作为文件名 (例如, "my_prompt" 变为 "my_prompt.json") 和 MCP 工具名称。
+            *   `name` (字符串, 必填): 新提示的唯一名称。这也将作为文件名 (例如, "my_prompt" 变为 "my_prompt.yaml") 和 MCP 工具名称。
             *   `description` (字符串, 可选): 提示的描述。
             *   `arguments` (对象数组, 可选): 每个对象定义一个参数，包含 `name` (字符串, 必填) 和 `description` (字符串, 可选)。
             *   `messages` (对象数组, 必填): 每个对象定义一条消息，包含 `role` (字符串, 必填: "user", "assistant", 或 "system") 和 `content` (对象, 必填: `{ type: "text", text: "..." }`)。

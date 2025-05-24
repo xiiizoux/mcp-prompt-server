@@ -8,6 +8,8 @@
     "build": "./node_modules/.bin/tsc",
     "start": "npm run build && node dist/index.js",
     "dev": "nodemon src/index.js",
+    "dev:worker": "wrangler dev",
+    "deploy:worker": "wrangler publish",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -26,10 +28,12 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240320.1",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^22.15.21",
     "@types/yaml": "^1.9.7",
     "nodemon": "^3.0.3",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "wrangler": "^3.30.1"
   }
 }
