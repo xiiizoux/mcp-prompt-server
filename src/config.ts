@@ -27,7 +27,7 @@ export interface Config {
      * 存储类型
      * @default "file"
      */
-    type: 'file' | 'cloudflare_kv' | 'supabase';
+    type: 'file';
     
     /**
      * 文件存储选项
@@ -46,30 +46,7 @@ export interface Config {
       promptsFile: string;
     };
     
-    /**
-     * Cloudflare KV 存储选项
-     */
-    cloudflareKV?: {
-      /**
-       * KV 命名空间
-       */
-      namespace: string;
-    };
-    
-    /**
-     * Supabase 存储选项
-     */
-    supabase?: {
-      /**
-       * Supabase URL
-       */
-      url: string;
-      
-      /**
-       * Supabase API Key
-       */
-      apiKey: string;
-    };
+    // 已移除 Cloudflare KV 和 Supabase 存储选项
   };
   
   /**
@@ -149,9 +126,10 @@ export function loadConfig(): Config {
     config.server.host = process.env.HOST;
   }
   
-  // 存储配置
+  // 存储类型
   if (process.env.STORAGE_TYPE) {
-    config.storage.type = process.env.STORAGE_TYPE as 'file' | 'cloudflare_kv' | 'supabase';
+    // 只支持文件存储
+    config.storage.type = 'file';
   }
   
   // 文件存储配置
@@ -177,20 +155,7 @@ export function loadConfig(): Config {
     }
   }
   
-  // Cloudflare KV 配置
-  if (process.env.KV_NAMESPACE) {
-    config.storage.cloudflareKV = {
-      namespace: process.env.KV_NAMESPACE
-    };
-  }
-  
-  // Supabase 配置
-  if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
-    config.storage.supabase = {
-      url: process.env.SUPABASE_URL,
-      apiKey: process.env.SUPABASE_KEY
-    };
-  }
+  // 已移除 Cloudflare KV 和 Supabase 配置加载代码
   
   // 日志配置
   if (process.env.LOG_LEVEL) {

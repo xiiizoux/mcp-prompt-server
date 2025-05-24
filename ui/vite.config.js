@@ -32,6 +32,7 @@ export default defineConfig({
       '/api': {
         target: `http://localhost:${BACKEND_PORT}`,
         changeOrigin: true,
+        // 移除 /api 前缀，以便与后端服务器的路由匹配
         rewrite: (path) => path.replace(/^\/api/, '')
       }
     }

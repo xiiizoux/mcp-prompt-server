@@ -1,7 +1,7 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { IStorage } from './storage-interface';
-import { ErrorHandler } from '../error-handling/error-handler';
-import { Logger } from '../utils/logger';
+import { StorageInterface } from './storage-interface.js';
+import { LoadedPrompt } from '../types.js';
+import { StorageError, logger } from '../utils/error-handler.js';
 
 /**
  * Supabase 存储实现

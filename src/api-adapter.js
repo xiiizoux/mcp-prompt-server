@@ -129,207 +129,95 @@ function loadSamplePrompts() {
  */
 async function initializeAdapter(options = {}) {
   try {
-    // 检查是否有 Supabase 配置
-    const config = require('./config').getConfig();
+    // 使用内存存储
+    logger.info('使用内存存储');
     
-    // 如果有 Supabase 配置，则使用 Supabase 存储
-    if (config.storage.type === 'supabase' && config.storage.supabase) {
-      logger.info('检测到 Supabase 配置，将使用 Supabase 存储');
+    // 加载示例提示词
+    loadSamplePrompts();
+    
+    storage = {
+      // 获取所有提示词
+      async getAllPrompts() {
+        return memoryStore.prompts;
+      },
       
-      // 使用 Supabase 存储
-      const { createClient } = require('@supabase/supabase-js');
-      const supabaseUrl = config.storage.supabase.url;
-      const supabaseKey = config.storage.supabase.apiKey;
+      // 获取提示词
+      async getPrompt(name) {
+        return memoryStore.prompts.find(p => p.name === name);
+      },
       
-      // 创建 Supabase 客户端
-      const supabase = createClient(supabaseUrl, supabaseKey);
-      
-      // 存储对象
-      storage = {
-        // 获取所有提示词
-        async getAllPrompts() {
-          const { data, error } = await supabase
-            .from('prompts')
-            .select('*')
-            .order('name');
-          
-          if (error) throw error;
-          return data || [];
-        },
-        
-        // 获取提示词
-        async getPrompt(name) {
-          const { data, error } = await supabase
-            .from('prompts')
-            .select('*')
-            .eq('name', name)
-            .single();
-          
-          if (error) throw error;
-          return data;
-        },
-        
-        // 添加提示词
-        async addPrompt(prompt) {
-          const { data, error } = await supabase
-            .from('prompts')
-            .insert([{
-              ...prompt,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            }]);
-          
-          if (error) throw error;
-          return { success: true };
-        },
-        
-        // 更新提示词
-        async updatePrompt(name, updatedPrompt) {
-          // 查找提示词
-          const { data: existingPrompt, error: findError } = await supabase
-            .from('prompts')
-            .select('id')
-            .eq('name', name)
-            .single();
-          
-          if (findError) throw findError;
-          if (!existingPrompt) throw new Error(`未找到提示词: ${name}`);
-          
-          // 更新提示词
-          const { error } = await supabase
-            .from('prompts')
-            .update({
-              ...updatedPrompt,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', existingPrompt.id);
-          
-          if (error) throw error;
-          return { success: true };
-        },
-        
-        // 删除提示词
-        async deletePrompt(name) {
-          const { error } = await supabase
-            .from('prompts')
-            .delete()
-            .eq('name', name);
-          
-          if (error) throw error;
-          return { success: true };
-        },
-        
-        // 获取所有类别
-        async getAllCategories() {
-          const { data, error } = await supabase
-            .from('categories')
-            .select('*')
-            .order('name');
-          
-          if (error) throw error;
-          return data || [];
-        },
-        
-        // 获取所有标签
-        async getAllTags() {
-          const { data, error } = await supabase
-            .from('tags')
-            .select('*')
-            .order('name');
-          
-          if (error) throw error;
-          return data || [];
-        },
-        
-        // 获取设置
-        async getSettings() {
-          const { data, error } = await supabase
-            .from('settings')
-            .select('*')
-            .eq('key', 'default_settings')
-            .single();
-          
-          if (error) {
-            // 如果设置不存在，返回默认设置
-            if (error.code === 'PGRST116') {
-              return defaultSettings;
-            }
-            throw error;
-          }
-          
-          return data?.value || defaultSettings;
+      // 添加提示词
+      async addPrompt(prompt) {
+        // 检查是否已存在
+        if (memoryStore.prompts.some(p => p.name === prompt.name)) {
+          throw new Error(`提示词已存在: ${prompt.name}`);
         }
-      };
-    } else {
-      // 使用内存存储
-      storage = {
-        async getAllPrompts() {
-          return memoryStore.prompts;
-        },
         
-        async getPrompt(name) {
-          return memoryStore.prompts.find(p => p.name === name);
-        },
+        memoryStore.prompts.push({
+          ...prompt,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
         
-        async addPrompt(prompt) {
-          memoryStore.prompts.push({
-            ...prompt,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          });
-          return { success: true };
-        },
-        
-        async updatePrompt(name, updatedPrompt) {
-          const index = memoryStore.prompts.findIndex(p => p.name === name);
-          if (index === -1) throw new Error(`未找到提示词: ${name}`);
-          
-          memoryStore.prompts[index] = {
-            ...updatedPrompt,
-            updatedAt: new Date().toISOString()
-          };
-          return { success: true };
-        },
-        
-        async deletePrompt(name) {
-          const index = memoryStore.prompts.findIndex(p => p.name === name);
-          if (index === -1) throw new Error(`未找到提示词: ${name}`);
-          
-          memoryStore.prompts.splice(index, 1);
-          return { success: true };
-        },
-        
-        async getAllCategories() {
-          // 从提示词中提取唯一的类别
-          const categories = [...new Set(memoryStore.prompts.map(p => p.category).filter(Boolean))];
-          return categories.map(name => ({ name }));
-        },
-        
-        async getAllTags() {
-          // 从提示词中提取唯一的标签
-          const tags = new Set();
-          memoryStore.prompts.forEach(p => {
-            if (p.tags && Array.isArray(p.tags)) {
-              p.tags.forEach(tag => tags.add(tag));
-            }
-          });
-          return [...tags].map(name => ({ name }));
-        },
-        
-        async getSettings() {
-          return memoryStore.settings;
-        }
-      };
+        return { success: true };
+      },
       
-      // 加载示例提示词
-      loadSamplePrompts();
-    }
+      // 更新提示词
+      async updatePrompt(name, updatedPrompt) {
+        const index = memoryStore.prompts.findIndex(p => p.name === name);
+        if (index === -1) {
+          throw new Error(`未找到提示词: ${name}`);
+        }
+        
+        memoryStore.prompts[index] = {
+          ...updatedPrompt,
+          updated_at: new Date().toISOString()
+        };
+        
+        return { success: true };
+      },
+      
+      // 删除提示词
+      async deletePrompt(name) {
+        const initialLength = memoryStore.prompts.length;
+        memoryStore.prompts = memoryStore.prompts.filter(p => p.name !== name);
+        
+        if (memoryStore.prompts.length === initialLength) {
+          throw new Error(`未找到提示词: ${name}`);
+        }
+        
+        return { success: true };
+      },
+      
+      // 获取所有类别
+      async getAllCategories() {
+        // 从提示词中提取唯一类别
+        const categories = [...new Set(memoryStore.prompts.map(p => p.category))];
+        return categories.map(name => ({ name }));
+      },
+      
+      // 获取所有标签
+      async getAllTags() {
+        // 从提示词中提取唯一标签
+        const tags = [...new Set(memoryStore.prompts.flatMap(p => p.tags || []))];
+        return tags.map(name => ({ name }));
+      },
+      
+      // 获取设置
+      async getSettings() {
+        return memoryStore.settings;
+      },
+      
+      // 更新设置
+      async updateSettings(settings) {
+        memoryStore.settings = { ...memoryStore.settings, ...settings };
+        return { success: true };
+      }
+    };
     
     logger.info('API 适配器初始化成功');
-    return true;
   } catch (error) {
     logger.error('API 适配器初始化失败', error);
-    throw error;
   }
 }
 

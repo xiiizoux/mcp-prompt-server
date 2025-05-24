@@ -111,6 +111,6 @@ export type RequestHandlerExtra = any;
 
 // 环境类型
 export enum EnvironmentType {
-  NODE = 'node',
-  CLOUDFLARE = 'cloudflare'
+  NODE = 'node'
+  // 已移除 CLOUDFLARE 环境类型
 }

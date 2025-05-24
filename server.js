@@ -19,7 +19,8 @@ const PORT = config.server.port || process.env.PORT || 9011;
 
 // 中间件
 app.use(cors({
-  origin: ['http://localhost:9010', 'http://127.0.0.1:9010'],
+  // 允许所有来源的请求，以便与浏览器预览工具兼容
+  origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Accept']
 }));
@@ -37,7 +38,15 @@ initializeAdapter()
   });
 
 // API 路由
+// 处理所有 POST 请求
 app.post('/*', async (req, res) => {
+  await handleApiRequest(req, res);
+});
+
+// 处理带有 /api 前缀的 POST 请求
+app.post('/api/*', async (req, res) => {
+  // 移除 /api 前缀
+  req.url = req.url.replace(/^\/api/, '');
   await handleApiRequest(req, res);
 });
 
