@@ -1,4 +1,46 @@
+# 依赖目录
 node_modules/
+
+# 构建输出
 dist/
+build/
+
+# 环境变量和密钥
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# 日志文件
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 运行时数据
 *.pid
-src/prompts/test_hello_prompt.json
+
+# 测试文件
+src/prompts/test_*.json
+
+# 编辑器和 IDE 文件
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# 缓存目录
+.cache/
+.npm/
+.eslintcache
+
+# 覆盖率报告
+coverage/
+
+# 本地数据库文件
+*.sqlite
+*.db

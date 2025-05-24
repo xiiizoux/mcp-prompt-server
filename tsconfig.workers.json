@@ -13,6 +13,6 @@
     "resolveJsonModule": true,
     "types": ["@cloudflare/workers-types"]
   },
-  "include": ["src/workers.ts", "src/api/**/*", "src/core/**/*", "src/storage/**/*", "src/types.ts"],
+  "include": ["src/cloudflare-worker.ts", "src/workers.ts", "src/api/**/*", "src/core/**/*", "src/storage/**/*", "src/types.ts", "src/cloudflare.d.ts"],
   "exclude": ["node_modules", "dist"]
 }

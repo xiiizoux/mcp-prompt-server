@@ -41,12 +41,141 @@ mcp-prompt-server/
     git clone https://github.com/xiiizoux/mcp-prompt-server.git
     cd mcp-prompt-server
     ```
-2.  安装依赖：
+
+2.  安装所有依赖（包括前端和后端）：
     ```bash
-    npm install
-    # 或
-    # pnpm install
+    npm run setup
     ```
+    这个命令会安装后端依赖并自动安装前端 UI 的依赖。
+
+    或者分别安装：
+    ```bash
+    # 安装后端依赖
+    npm install
+    
+    # 安装前端依赖
+    cd ui
+    npm install
+    cd ..
+    ```
+
+## 环境配置
+
+项目支持两种存储方式：文件存储和 Supabase 数据库存储。下面是设置环境的步骤：
+
+### 1. 创建环境变量文件
+
+复制示例环境变量文件：
+
+```bash
+cp .env.example .env
+```
+
+### 2. 配置环境变量
+
+编辑 `.env` 文件，根据您的需求设置以下参数：
+
+```
+# 服务器配置
+PORT=14246
+HOST=localhost
+
+# 存储配置
+# 可选值： file (文件存储), cloudflare_kv (Cloudflare KV), supabase (Supabase 数据库)
+STORAGE_TYPE=supabase
+
+# Supabase 配置
+# 如果使用 Supabase，请填写以下信息
+SUPABASE_URL=https://your-project-id.supabase.co
+SUPABASE_KEY=your-supabase-api-key
+```
+
+### 3. Supabase 数据库初始化
+
+如果您选择使用 Supabase 作为存储方式，需要在 Supabase 中创建必要的数据库表。请登录 [Supabase 控制台](https://app.supabase.com)，选择您的项目，然后在 SQL 编辑器中执行以下 SQL 语句：
+
+```sql
+-- 创建 UUID 扩展
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- 创建类别表
+CREATE TABLE IF NOT EXISTS categories (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name TEXT NOT NULL UNIQUE,
+  description TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 创建提示词表
+CREATE TABLE IF NOT EXISTS prompts (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name TEXT NOT NULL UNIQUE,
+  content TEXT NOT NULL,
+  description TEXT,
+  category_id UUID REFERENCES categories(id),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 创建标签表
+CREATE TABLE IF NOT EXISTS tags (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name TEXT NOT NULL UNIQUE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 创建提示词-标签关联表
+CREATE TABLE IF NOT EXISTS prompt_tags (
+  prompt_id UUID REFERENCES prompts(id) ON DELETE CASCADE,
+  tag_id UUID REFERENCES tags(id) ON DELETE CASCADE,
+  PRIMARY KEY (prompt_id, tag_id)
+);
+
+-- 创建设置表
+CREATE TABLE IF NOT EXISTS settings (
+  key TEXT PRIMARY KEY,
+  value JSONB NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 添加默认设置
+INSERT INTO settings (key, value) 
+VALUES ('default_settings', '{"version": "1.0.0"}') 
+ON CONFLICT (key) DO NOTHING;
+```
+
+执行完这些 SQL 语句后，您应该会看到 "Success. No rows returned" 的消息，表示表已成功创建。
+
+# 日志配置
+LOG_LEVEL=info
+LOG_REQUESTS=true
+
+# 缓存配置
+CACHE_ENABLED=true
+CACHE_TTL=300
+```
+
+### 3. Supabase 设置（如果使用 Supabase 存储）
+
+如果您选择使用 Supabase 作为存储后端，请按照以下步骤进行设置：
+
+1. **创建 Supabase 账户和项目**
+   - 注册 [Supabase](https://supabase.com/) 账户
+   - 创建新项目
+   - 复制项目 URL 和 API 密钥（在项目设置 > API 中找到）
+
+2. **更新环境变量**
+   - 将您的 Supabase URL 和 API 密钥添加到 `.env` 文件中
+   - 将 `STORAGE_TYPE` 设置为 `supabase`
+
+3. **初始化数据库**
+   - 运行以下命令创建必要的表和函数：
+   ```bash
+   npm run prepare-db
+   ```
+   这个命令会自动创建必要的数据库表和函数，包括提示词、类别、标签等。
 
 ## 构建项目
 
@@ -59,16 +188,44 @@ npm run build
 
 ## 运行服务器
 
-### 传统部署方式（基于标准输入/输出）
+### 运行服务器和 UI
 
-启动 MCP Prompt 服务器：
+有两种方式可以运行 MCP Prompt Server：
+
+#### 1. 同时运行后端服务器和前端 UI（推荐）
+
+使用以下命令同时启动后端服务器和前端 UI：
+
+```bash
+npm run dev:full
+```
+
+这将使用 `concurrently` 同时启动后端服务器（监听在 `.env` 文件中配置的端口）和前端 UI（默认监听在 3000 端口）。
+
+#### 2. 分别运行后端服务器和前端 UI
+
+**启动后端服务器：**
+
+```bash
+npm run dev
+```
+此命令使用 `nodemon` 运行服务器，当文件变更时会自动重启。
+
+**启动前端 UI：**
+
+```bash
+npm run ui:dev
+```
+此命令将启动前端 UI 开发服务器。
+
+#### 生产部署
+
+对于生产部署，可以使用以下命令：
 
 ```bash
 npm start
 ```
-此命令会首先构建项目（如果尚未构建），然后使用 `node dist/index.js` 运行服务器。服务器将通过标准输入/输出 (stdio) 监听 MCP 连接。
-
-对于开发，您可能还会看到一个使用 `nodemon` 的 `dev` 脚本 (例如 `npm run dev`)，但 `npm start` 是运行生产就绪服务器的标准方式。
+此命令会首先构建项目（如果尚未构建），然后使用 `node server.js` 运行服务器。
 
 ### Cloudflare Workers 部署方式（基于 HTTP API）
 

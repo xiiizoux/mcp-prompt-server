@@ -22,12 +22,29 @@ export interface PromptMessage {
   content: PromptMessageContent | { text: string };
 }
 
+// 提示词标签类型
+export type PromptTag = string;
+
+// 提示词类别
+export enum PromptCategory {
+  WRITING = 'writing',
+  CODING = 'coding',
+  ANALYSIS = 'analysis',
+  CONVERSATION = 'conversation',
+  CREATIVITY = 'creativity',
+  OTHER = 'other'
+}
+
 // 基础提示词接口
 export interface Prompt {
   name?: string; // 初始可选，但后续会验证
   description?: string;
   arguments?: PromptArgument[];
   messages?: PromptMessage[];
+  tags?: PromptTag[]; // 提示词标签，用于分类和搜索
+  category?: PromptCategory; // 提示词类别
+  createdAt?: string; // 创建时间
+  updatedAt?: string; // 更新时间
 }
 
 // 已加载的提示词（name必填）

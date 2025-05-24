@@ -13,3 +13,23 @@ declare interface ExecutionContext {
   waitUntil(promise: Promise<any>): void;
   passThroughOnException(): void;
 }
+
+/**
+ * Cloudflare Workers 环境变量
+ */
+declare interface Env {
+  // KV 命名空间
+  PROMPTS_KV: KVNamespace;
+}
+
+/**
+ * 全局缓存对象
+ */
+declare const caches: CacheStorage;
+
+/**
+ * 全局对象
+ */
+declare const globalThis: {
+  caches: CacheStorage;
+};

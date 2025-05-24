@@ -9,10 +9,21 @@ The MCP Prompt Server is a Node.js application that leverages the Model Context 
 * **Dynamic Prompt Loading:** Loads prompt definitions from YAML files located in the `src/prompts` directory.
 * **MCP Tool Exposure:** Each loaded prompt is automatically exposed as an individual MCP tool.
 * **Management Tools:**
-    * `get_prompt_names`: Lists all currently available prompt tools.
+    * `get_prompt_names`: Lists all currently available prompt tools (supports filtering by category and tags).
+    * `search_prompts`: Searches prompts based on keywords, categories, and tags with pagination support.
+    * `get_prompt_details`: Retrieves detailed information about a specific prompt.
     * `reload_prompts`: Reloads all prompt files from the disk, updating the available tools.
-* **Dynamic Prompt Creation:**
-    * `add_new_prompt`: A tool that allows for dynamically adding new prompts to the server without manually creating files and restarting.
+* **Dynamic Prompt Creation and Management:**
+    * `add_new_prompt`: Dynamically adds new prompts without manually creating files and restarting.
+    * `update_prompt`: Updates existing prompts with new content or metadata.
+    * `delete_prompt`: Removes prompts from the server.
+* **Batch Operations:**
+    * `export_prompts`: Exports prompts based on filters for backup or migration.
+    * `import_prompts`: Imports multiple prompts at once.
+    * `batch_update_prompts`: Updates multiple prompts with the same changes.
+* **Metadata Support:**
+    * `get_all_tags`: Retrieves all tags and their usage frequency.
+    * `get_all_categories`: Lists all categories and their usage frequency.
 * **TypeScript-Based:** Written in TypeScript for enhanced robustness and maintainability.
 * **Multiple Deployment Options:** Supports both traditional deployment using standard input/output and Cloudflare Workers deployment using HTTP API.
 
@@ -88,6 +99,76 @@ This project supports deployment to Cloudflare Workers, allowing you to leverage
 - **Global Distributed Deployment**: Leverage Cloudflare's global edge network for low-latency access
 - **No Server Management**: No need to maintain servers, operating systems, or other infrastructure
 - **Automatic Scaling**: Scales automatically based on traffic, no manual intervention required
+- **Persistent Storage**: Uses Cloudflare KV for storing prompts, no file system access needed
+
+#### Prerequisites for Cloudflare Workers Deployment
+
+1. A Cloudflare account
+2. Wrangler CLI installed: `npm install -g wrangler`
+3. Authenticate with Cloudflare: `wrangler login`
+
+#### Setting Up Cloudflare KV Namespace
+
+Create a KV namespace to store your prompts:
+
+```bash
+wrangler kv:namespace create PROMPTS_KV
+```
+
+This will output a namespace ID. Update the `wrangler.toml` file with this ID:
+
+```toml
+[[kv_namespaces]]
+binding = "PROMPTS_KV"
+id = "your-kv-namespace-id-here" # Replace with the ID from the command output
+```
+
+For local development, create a preview namespace:
+
+```bash
+wrangler kv:namespace create PROMPTS_KV --preview
+```
+
+Update the `wrangler.toml` file with the preview ID as well:
+
+```toml
+[[kv_namespaces]]
+binding = "PROMPTS_KV"
+id = "your-kv-namespace-id-here"
+preview_id = "your-preview-kv-namespace-id-here" # Replace with the preview ID
+```
+
+#### Building and Deploying to Cloudflare Workers
+
+Build the project for Cloudflare Workers:
+
+```bash
+npm run build:worker
+```
+
+Run locally for development:
+
+```bash
+npm run dev:worker
+```
+
+Deploy to Cloudflare Workers:
+
+```bash
+npm run deploy:worker
+```
+
+#### Using the HTTP API
+
+Once deployed, you can interact with your MCP Prompt Server via HTTP requests:
+
+```bash
+curl -X POST https://your-worker-subdomain.workers.dev/ \
+  -H "Content-Type: application/json" \
+  -d '{"type":"request","id":"1","tool":"get_prompt_names","args":{}}'
+```
+
+This will return a JSON response with the available prompt names.
 - **HTTP API Interface**: Provides standard HTTP API for easy integration with other services
 
 #### Prerequisites
