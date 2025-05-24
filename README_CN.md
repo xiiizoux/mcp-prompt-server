@@ -20,12 +20,10 @@ MCP Prompt 服务器是一个 Node.js 应用程序，它利用模型上下文协
 ```
 mcp-prompt-server/
 ├── src/
-│   ├── api-adapter.js    # API 适配器，用于处理前端请求
+│   ├── api-adapter.js    # API 适配器
 │   ├── config.ts         # 配置管理
 │   ├── storage/          # 存储接口实现
 │   └── prompts/          # 提示词存储目录
-├── public/              # 静态文件目录，用于前端界面
-├── ui/                  # 前端代码
 ├── server.js            # Express 服务器入口文件
 ├── package.json         # 项目元数据和依赖项
 ├── tsconfig.json        # TypeScript 编译器选项
@@ -46,21 +44,9 @@ mcp-prompt-server/
     cd mcp-prompt-server
     ```
 
-2.  安装所有依赖（包括前端和后端）：
+2.  安装依赖：
     ```bash
-    npm run setup
-    ```
-    这个命令会安装后端依赖并自动安装前端 UI 的依赖。
-
-    或者分别安装：
-    ```bash
-    # 安装后端依赖
     npm install
-    
-    # 安装前端依赖
-    cd ui
-    npm install
-    cd ..
     ```
 
 ## 环境配置
@@ -84,9 +70,6 @@ cp .env.example .env
 PORT=9011
 HOST=localhost
 
-# 前端配置
-FRONTEND_PORT=9010
-
 # 存储配置
 STORAGE_TYPE=file
 PROMPTS_DIR=./prompts
@@ -105,33 +88,18 @@ CACHE_ENABLED=true
 运行 MCP Prompt 服务器：
 
 ```bash
-# 同时运行后端服务器和前端 UI
-npm run dev:full
-```
-
-这个命令会启动后端服务器和前端 UI 开发服务器。后端服务器将在端口 9011（或您在 .env 文件中指定的端口）上运行，前端 UI 将在端口 9010 上运行。
-
-您也可以分别运行后端和前端：
-
-```bash
-# 只运行后端服务器
+# 开发模式
 npm run dev
-
-# 只运行前端 UI
-npm run ui:dev
 ```
 
-对于生产部署，您可以构建前端然后启动服务器：
+这个命令会启动服务器，并在文件变化时自动重新加载。服务器将在端口 9011（或您在 .env 文件中指定的端口）上运行。
+
+对于生产部署：
 
 ```bash
-# 构建前端
-npm run ui:build
-
 # 启动服务器
 npm start
 ```
-
-这将构建前端 UI 并将其放在 `public` 目录中，该目录将由 Express 服务器提供服务。
 
 ### 使用 API
 
@@ -144,16 +112,6 @@ curl -X POST http://localhost:9011/api/get_prompt_names \
 ```
 
 这将返回一个包含可用提示词名称的 JSON 响应。
-
-### 使用 Web UI
-
-您也可以使用 Web UI 来管理您的提示词。打开浏览器并导航到：
-
-```
-http://localhost:9010
-```
-
-Web UI 提供了一个用户友好的界面，用于管理提示词、类别和标签。
 
 
 ## 提示词管理

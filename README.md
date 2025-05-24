@@ -32,13 +32,10 @@ The MCP Prompt Server is a Node.js application that leverages the Model Context 
 ```
 mcp-prompt-server/
 ├── src/
-│   ├── index.ts         # Main server logic and tool definitions
 │   ├── api-adapter.js   # API adapter for Express server
 │   ├── config.ts        # Configuration management
 │   ├── storage/         # Storage interface implementations
 │   └── prompts/         # Directory containing prompt definition files (YAML)
-├── public/              # Static files for web UI
-├── ui/                  # Frontend UI code
 ├── server.js            # Express server implementation
 ├── package.json         # Project metadata and dependencies
 ├── tsconfig.json        # TypeScript compiler options
@@ -81,28 +78,14 @@ This command uses `tsc` (the TypeScript compiler) to compile files from `src/` t
 To start the MCP Prompt Server:
 
 ```bash
-npm run dev:full
-```
-
-This command will start both the backend server and the frontend UI development server. The backend server will run on port 9011 (or the port specified in your .env file), and the frontend UI will run on port 9010.
-
-You can also run the backend and frontend separately:
-
-```bash
-# Run only the backend server
 npm run dev
-
-# Run only the frontend UI
-npm run ui:dev
 ```
 
-For production deployment, you can build the frontend and then start the server:
+This command will start the server in development mode with auto-reloading. The server will run on port 9011 (or the port specified in your .env file).
+
+For production deployment:
 
 ```bash
-# Build the frontend
-npm run ui:build
-
-# Start the server
 npm start
 ```
 
@@ -118,17 +101,6 @@ curl -X POST http://localhost:9011/api/get_prompt_names \
 
 This will return a JSON response with the available prompt names.
 
-### Using the Web UI
-
-You can also use the web UI to manage your prompts. Open your browser and navigate to:
-
-```
-http://localhost:9010
-```
-
-The web UI provides a user-friendly interface for managing prompts, categories, and tags.
-
-
 
 ## Configuration
 
@@ -140,9 +112,8 @@ cp .env.example .env
 
 The main configuration options include:
 
-- **PORT**: The port for the backend server (default: 9011)
-- **HOST**: The host for the backend server (default: localhost)
-- **FRONTEND_PORT**: The port for the frontend development server (default: 9010)
+- **PORT**: The port for the server (default: 9011)
+- **HOST**: The host for the server (default: localhost)
 - **STORAGE_TYPE**: The storage type to use (currently only supports 'file')
 - **PROMPTS_DIR**: The directory to store prompt files (default: ./prompts)
 - **PROMPTS_FILE**: The file to store prompts (default: prompts.json)

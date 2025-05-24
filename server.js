@@ -25,7 +25,7 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Accept']
 }));
 app.use(bodyParser.json());
-app.use(express.static(path.join(__dirname, 'public')));
+// 不再提供静态文件服务
 
 // 初始化 API 适配器
 initializeAdapter()
@@ -50,13 +50,13 @@ app.post('/api/*', async (req, res) => {
   await handleApiRequest(req, res);
 });
 
-// 前端路由 - 将所有其他请求重定向到 index.html
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// API 文档路由
+app.get('/', (req, res) => {
+  res.send('MCP Prompt Server API - 使用 POST 请求访问 API 端点');
 });
 
 // 启动服务器
 app.listen(PORT, () => {
   console.log(`MCP Prompt Server 正在运行，端口: ${PORT}`);
-  console.log(`访问 http://localhost:${PORT} 使用 Web UI`);
+  console.log(`使用 POST 请求访问 API 端点，例如: http://localhost:${PORT}/api/get_prompt_names`);
 });

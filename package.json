@@ -11,14 +11,9 @@
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
     "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
-    "ui:dev": "cd ui && npm run dev -- --port 9010",
-    "ui:build": "cd ui && npm run build",
-    "ui:install": "cd ui && npm install",
-    "setup": "npm install && npm run ui:install",
+    "setup": "npm install",
     "lint": "eslint . --ext .js,.ts",
-    "lint:fix": "eslint . --ext .js,.ts --fix",
-    "prepare-db": "node scripts/prepare-db.js",
-    "dev:full": "concurrently \"npm run dev\" \"npm run ui:dev\""
+    "lint:fix": "eslint . --ext .js,.ts --fix"
   },
   "keywords": [
     "mcp",
@@ -48,7 +43,6 @@
     "@types/yaml": "^1.9.7",
     "@typescript-eslint/eslint-plugin": "^7.3.1",
     "@typescript-eslint/parser": "^7.3.1",
-    "concurrently": "^8.2.2",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.1.3",
