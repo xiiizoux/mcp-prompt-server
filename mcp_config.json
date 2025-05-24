@@ -3,7 +3,7 @@
     "prompt-server": {
       "command": "node",
       "args": [
-        "/Users/joe/Dropbox/code/MCP/mcp-prompt-server"
+        "./dist/src/index.js"
       ],
       "env": {}
     }

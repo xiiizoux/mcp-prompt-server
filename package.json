@@ -2,16 +2,14 @@
   "name": "mcp-prompt-server",
   "version": "1.0.0",
   "description": "MCP服务器，提供预设的prompt工具来引导Claude执行任务",
-  "main": "server.js",
+  "main": "dist/src/index.js",
   "type": "commonjs",
   "scripts": {
-    "start": "node dist/server.js",
-    "start:ts": "ts-node server.ts",
-    "dev": "ts-node-dev --respawn server.ts",
+    "start": "node dist/src/index.js",
+    "dev": "ts-node-dev --respawn src/index.ts",
     "build": "tsc",
     "setup": "npm install",
-    "lint": "eslint . --ext .ts",
-    "prod": "npm run build && npm start"
+    "lint": "eslint . --ext .ts"
   },
   "keywords": [
     "mcp",
@@ -23,7 +21,6 @@
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.7.0",
-    "@supabase/supabase-js": "^2.49.8",
     "body-parser": "^1.20.3",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
@@ -47,5 +44,6 @@
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.8.3"
-  }
+  },
+  "packageManager": "pnpm@10.11.0+sha512.6540583f41cc5f628eb3d9773ecee802f4f9ef9923cc45b69890fb47991d4b092964694ec3a4f738a420c918a333062c8b925d312f42e4f0c263eb603551f977"
 }

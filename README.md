@@ -2,41 +2,31 @@
 
 ## Overview
 
-The MCP Prompt Server is a Node.js application that leverages the Model Context Protocol (MCP) to expose a collection of Large Language Model (LLM) prompts as callable tools. It allows for dynamic loading of prompts from local files and provides tools for managing and interacting with these prompts. This server is designed to guide AI models like Claude in performing specific tasks by providing them with structured prompts.
+The MCP Prompt Server is a pure MCP tool that provides a collection of Large Language Model (LLM) prompts as callable tools. It allows for dynamic loading of prompts from YAML files and provides tools for managing and interacting with these prompts. This tool is designed to guide AI models like Claude in performing specific tasks by providing them with structured prompts.
 
 ## Features
 
 * **Dynamic Prompt Loading:** Loads prompt definitions from YAML files located in the `src/prompts` directory.
-* **MCP Tool Exposure:** Each loaded prompt is automatically exposed as an individual MCP tool.
-* **Management Tools:**
-    * `get_prompt_names`: Lists all currently available prompt tools (supports filtering by category and tags).
-    * `search_prompts`: Searches prompts based on keywords, categories, and tags with pagination support.
+* **MCP Tool Integration:** Provides a set of MCP tools for managing prompts.
+* **Core Management Tools:**
+    * `get_prompt_names`: Lists all currently available prompt names.
     * `get_prompt_details`: Retrieves detailed information about a specific prompt.
     * `reload_prompts`: Reloads all prompt files from the disk, updating the available tools.
-* **Dynamic Prompt Creation and Management:**
-    * `add_new_prompt`: Dynamically adds new prompts without manually creating files and restarting.
-    * `update_prompt`: Updates existing prompts with new content or metadata.
-    * `delete_prompt`: Removes prompts from the server.
-* **Batch Operations:**
-    * `export_prompts`: Exports prompts based on filters for backup or migration.
-    * `import_prompts`: Imports multiple prompts at once.
-    * `batch_update_prompts`: Updates multiple prompts with the same changes.
-* **Metadata Support:**
-    * `get_all_tags`: Retrieves all tags and their usage frequency.
-    * `get_all_categories`: Lists all categories and their usage frequency.
+* **Prompt Template Support:**
+    * `get_prompt_template`: Provides a YAML template for creating new prompts.
+    * `create_prompt`: Creates new prompts from YAML content and saves them to disk.
 * **TypeScript-Based:** Written in TypeScript for enhanced robustness and maintainability.
-* **Simple Deployment:** Supports local deployment with Express server for easy setup and testing.
 
 ## Project Structure
 
 ```
 mcp-prompt-server/
 ├── src/
-│   ├── api-adapter.js   # API adapter for Express server
-│   ├── config.ts        # Configuration management
-│   ├── storage/         # Storage interface implementations
-│   └── prompts/         # Directory containing prompt definition files (YAML)
-├── server.js            # Express server implementation
+│   ├── index.ts         # Main MCP tool implementation
+│   ├── types.ts         # TypeScript type definitions
+│   ├── prompts/         # Directory containing prompt definition files (YAML)
+│   └── templates/       # Directory containing templates for new prompts
+├── mcp_config.json      # MCP configuration file
 ├── package.json         # Project metadata and dependencies
 ├── tsconfig.json        # TypeScript compiler options
 ├── README.md            # English README
@@ -73,367 +63,232 @@ npm run build
 
 This command uses `tsc` (the TypeScript compiler) to compile files from `src/` to the `dist/` directory, as configured in `tsconfig.json`.
 
-## Running the Server
+## Running as an MCP Tool
 
-To start the MCP Prompt Server:
+To use the MCP Prompt Server as a tool:
 
-```bash
-npm run dev
+1. Configure the MCP configuration file (`mcp_config.json`) to include the prompt server tool:
+
+```json
+{
+  "tools": [
+    {
+      "name": "prompt-server",
+      "command": "./dist/src/index.js"
+    }
+  ]
+}
 ```
 
-This command will start the server in development mode with auto-reloading. The server will run on port 9011 (or the port specified in your .env file).
+2. Start the MCP server with this configuration file.
 
-For production deployment:
+3. The prompt server will be available as an MCP tool with the following functions:
+   - `get_prompt_names`
+   - `get_prompt_details`
+   - `reload_prompts`
+   - `get_prompt_template`
+   - `create_prompt`
+
+For development purposes, you can also run the tool directly:
 
 ```bash
 npm start
 ```
-
-### Using the API
-
-Once the server is running, you can interact with your MCP Prompt Server via HTTP requests:
-
-```bash
-curl -X POST http://localhost:9011/api/get_prompt_names \
-  -H "Content-Type: application/json" \
-  -d '{}'
-```
-
-This will return a JSON response with the available prompt names.
 
 
 ## Configuration
 
-The MCP Prompt Server uses a `.env` file for configuration. You can copy the `.env.example` file to create your own `.env` file:
+The MCP Prompt Server is configured through the MCP configuration file (`mcp_config.json`). The main configuration is the path to the tool command:
 
-```bash
-cp .env.example .env
+```json
+{
+  "tools": [
+    {
+      "name": "prompt-server",
+      "command": "./dist/src/index.js"
+    }
+  ]
+}
 ```
 
-The main configuration options include:
-
-- **PORT**: The port for the server (default: 9011)
-- **HOST**: The host for the server (default: localhost)
-- **STORAGE_TYPE**: The storage type to use (currently only supports 'file')
-- **PROMPTS_DIR**: The directory to store prompt files (default: ./prompts)
-- **PROMPTS_FILE**: The file to store prompts (default: prompts.json)
+The prompt server will automatically load prompts from the `src/prompts` directory when it starts.
 
 ## Development
 
 For development, you can use the following commands:
-```bash
-# Run the server with nodemon for auto-reloading
-npm run dev
-
-# Run the frontend UI development server
-npm run ui:dev
-
-# Run both backend and frontend together
-npm run dev:full
-```
-
-After the server starts, you'll see output similar to:
-
-```
-MCP Prompt Server 正在运行，端口: 9011
-访问 http://localhost:9011 使用 Web UI
-```
-
-You can now access http://localhost:9011 in your browser to use the server, or http://localhost:9010 to use the development UI.
-
-**Managing Prompts**
-
-During development, you can manage prompts using the web UI or the API:
-
-1. Using the Web UI: Navigate to http://localhost:9010 and use the interface to add, update, or delete prompts.
-
-2. Using the API: Send HTTP requests to the server to manage prompts:
 
 ```bash
-# Add a new prompt
-curl -X POST http://localhost:9011/api/add_new_prompt \
-  -H "Content-Type: application/json" \
-  -d '{"name":"example_prompt","description":"An example prompt","category":"Examples","tags":["example","demo"],"messages":[{"role":"system","content":"You are a helpful assistant."}]}'
+# Build the TypeScript code
+npm run build
+
+# Run the tool directly
+npm start
+```
+
+After the tool starts, you'll see output similar to:
+
+```
+加载提示词目录: /path/to/mcp-prompt-server/src/prompts
+已加载 X 个提示词
+MCP Prompt Server 工具已加载
+可用工具: get_prompt_names, get_prompt_details, reload_prompts, get_prompt_template, create_prompt
 ```
 
 **Debugging Tips**
 
-- During local development, you can see log output in the console
+- During development, you can see log output in the console
 - Use `console.log()` to debug your code
-- The server uses nodemon, so it will automatically restart when you make changes to the code
+- The tool will automatically reload prompts when you call the `reload_prompts` function
 
-## Production Deployment
+## MCP Tool Reference
 
-For production deployment, you can build the frontend and then start the server:
+The MCP Prompt Server provides the following tools through the MCP protocol:
 
-```bash
-# Build the frontend
-npm run ui:build
+### Available Tools
 
-# Start the server
-npm start
-```
+| Tool Name | Description |
+|---------|------|
+| `get_prompt_names` | Get all available prompt names |
+| `get_prompt_details` | Get details of a specific prompt |
+| `reload_prompts` | Reload all prompts from the directory |
+| `get_prompt_template` | Get the YAML template for creating new prompts |
+| `create_prompt` | Create a new prompt from YAML content |
 
-This will build the frontend UI and place it in the `public` directory, which will be served by the Express server.
-
-## API Reference
-
-The MCP Prompt Server provides a RESTful API for managing prompts. All API endpoints use JSON for requests and responses.
-
-### API Endpoints
-
-| Endpoint | Method | Description |
-|---------|------|------|
-| `/api/get_prompt_names` | POST | Get all available prompt names |
-| `/api/search_prompts` | POST | Search prompts with filtering and pagination |
-| `/api/get_prompt_details` | POST | Get details of a specific prompt |
-| `/api/add_new_prompt` | POST | Add a new prompt |
-| `/api/update_prompt` | POST | Update an existing prompt |
-| `/api/delete_prompt` | POST | Delete a prompt |
-| `/api/get_all_categories` | POST | Get all categories |
-| `/api/get_all_tags` | POST | Get all tags |
-| `/api/get_settings` | POST | Get server settings |
-| `/api/update_settings` | POST | Update server settings |
-
-### Request and Response Examples
+### Tool Usage Examples
 
 1. **Get Prompt Names**
 
-   ```bash
-   curl -X POST http://localhost:9011/api/get_prompt_names \
-     -H "Content-Type: application/json" \
-     -d '{}'
+   ```javascript
+   // Through MCP framework
+   const result = await mcpClient.callTool('prompt-server', 'get_prompt_names');
+   console.log(result.data); // Array of prompt names
    ```
 
-   Response:
-   ```json
-   {
-     "promptNames": ["general_assistant", "code_assistant", "writing_assistant"]
-   }
+2. **Get Prompt Details**
+
+   ```javascript
+   // Through MCP framework
+   const result = await mcpClient.callTool('prompt-server', 'get_prompt_details', {
+     name: 'code_assistant'
+   });
+   console.log(result.data); // Prompt details
    ```
 
-2. **Search Prompts**
+3. **Reload Prompts**
 
-   ```bash
-   curl -X POST http://localhost:9011/api/search_prompts \
-     -H "Content-Type: application/json" \
-     -d '{
-       "query": "code",
-       "page": 1,
-       "pageSize": 10
-     }'
+   ```javascript
+   // Through MCP framework
+   const result = await mcpClient.callTool('prompt-server', 'reload_prompts');
+   console.log(result.message); // Confirmation message
    ```
 
-   Response:
-   ```json
-   {
-     "prompts": [
-       {
-         "name": "code_assistant",
-         "description": "代码助手提示词，用于编程和代码相关问题",
-         "category": "编程",
-         "tags": ["代码", "编程", "开发"]
-       }
-     ],
-     "total": 1,
-     "page": 1,
-     "pageSize": 10
-   }
+4. **Get Prompt Template**
+
+   ```javascript
+   // Through MCP framework
+   const result = await mcpClient.callTool('prompt-server', 'get_prompt_template');
+   console.log(result.data); // YAML template for creating prompts
    ```
 
-3. **Add New Prompt**
+5. **Create Prompt**
 
-   ```bash
-   curl -X POST http://localhost:9011/api/add_new_prompt \
-     -H "Content-Type: application/json" \
-     -d '{
-       "name": "test_greeting",
-       "description": "A simple greeting prompt",
-       "category": "Examples",
-       "tags": ["greeting", "example"],
-       "parameters": [
-         { "name": "user_name", "type": "string", "description": "Username", "required": true },
-         { "name": "time_of_day", "type": "string", "description": "Time of day", "required": false, "default": "morning" }
-       ],
-       "messages": [
-         {
-           "role": "system",
-           "content": "Good {{time_of_day}}, {{user_name}}! Hope you're having a great day."
-         }
-       ]
-     }'
+   ```javascript
+   // Through MCP framework
+   const yamlContent = `
+   name: greeting_prompt
+   description: A simple greeting prompt
+   category: Examples
+   tags:
+     - greeting
+     - example
+   arguments:
+     - name: user_name
+       description: User's name
+       required: true
+     - name: time_of_day
+       description: Time of day (morning, afternoon, evening)
+       required: false
+   messages:
+     - role: user
+       content:
+         type: text
+         text: |
+           Good {{time_of_day}}, {{user_name}}! Hope you're having a great day.
+   `;
+   
+   const result = await mcpClient.callTool('prompt-server', 'create_prompt', {
+     name: 'greeting_prompt',
+     content: yamlContent
+   });
+   console.log(result.message); // Confirmation message
    ```
 
-   Response:
-   ```json
-   {
-     "success": true
-   }
-   ```
+## Integration with AI Assistants
 
-4. **Get Prompt Details**
+One of the key features of the MCP Prompt Server is its ability to work with AI assistants like Claude to create and manage prompts. Here's a typical workflow:
 
-   ```bash
-   curl -X POST http://localhost:9011/api/get_prompt_details \
-     -H "Content-Type: application/json" \
-     -d '{
-       "name": "code_assistant"
-     }'
-   ```
+1. **Get the prompt template** using the `get_prompt_template` tool
+2. **Ask the AI** to fill in the template based on your requirements
+3. **Create the prompt** using the `create_prompt` tool with the AI-generated content
 
-   Response:
-   ```json
-   {
-     "prompt": {
-       "name": "code_assistant",
-       "description": "代码助手提示词，用于编程和代码相关问题",
-       "category": "编程",
-       "tags": ["代码", "编程", "开发"],
-       "parameters": [],
-       "messages": [
-         {
-           "role": "system",
-           "content": "你是一个专业的编程助手，能够帮助用户解决各种编程问题，提供代码示例和解释。"
-         }
-       ],
-       "createdAt": "2025-05-24T14:42:31.123Z",
-       "updatedAt": "2025-05-24T14:42:31.123Z"
-     }
-   }
-   ```
-
-**Integration with Other Applications**
-
-You can integrate the MCP Prompt Server API with any programming language or tool that supports HTTP requests. Here's a simple integration example using JavaScript:
-
-```javascript
-async function getPrompts() {
-  const response = await fetch('http://localhost:9011/api/get_prompt_names', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({}),
-  });
-  
-  return await response.json();
-}
-
-// Usage example
-getPrompts()
-  .then(result => console.log(result.promptNames))
-  .catch(error => console.error('Error:', error));
-```
-
-**Security Considerations**
-
-In a production environment, you may want to add authentication and authorization mechanisms to your API. This can be achieved through:
-
-1. Using API keys: Add authorization tokens in request headers
-2. Implementing IP whitelisting or other access control mechanisms
-3. Setting up HTTPS for secure communication
+This allows for a collaborative process where the AI helps design effective prompts that can then be saved and reused.
 
 ## Prompts
 
-## 提示词管理
+### Prompt Structure
 
-提示词是用于引导 LLM（大型语言模型）执行特定任务的指令集合。在 MCP Prompt Server 中，提示词以 JSON 格式存储在内存中，并可以通过 API 进行管理。
+Prompts in the MCP Prompt Server are defined in YAML format and stored in the `src/prompts` directory. Each prompt file contains the following fields:
 
-### 提示词结构
+* `name` (string, required): The unique identifier for the prompt.
+* `description` (string, optional): A description of what the prompt does.
+* `category` (string, optional): The category the prompt belongs to.
+* `tags` (array of strings, optional): Tags associated with the prompt.
+* `arguments` (array of objects, optional): Parameters that can be passed to the prompt. Each parameter object contains:
+  * `name` (string, required): The parameter name.
+  * `description` (string, optional): Description of the parameter.
+  * `required` (boolean, optional): Whether the parameter is required.
+* `messages` (array of objects, required): Defines the conversation structure. Each message object contains:
+  * `role` (string, required): The speaker's role (e.g., "system", "user", "assistant").
+  * `content` (object, required): The message content, typically with:
+    * `type`: "text"
+    * `text`: The message text, which can contain parameter placeholders like `{{parameter_name}}`.
 
-每个提示词包含以下字段：
+**Example:**
 
-* `name` (string, 必需): 提示词的唯一标识符。
-* `description` (string, 可选): 提示词的描述信息。
-* `category` (string, 可选): 提示词所属的类别。
-* `tags` (array of strings, 可选): 与提示词相关的标签。
-* `parameters` (array of objects, 可选): 提示词的参数定义。每个参数对象包含：
-  * `name` (string, 必需): 参数名称。
-  * `type` (string, 必需): 参数类型，如 "string"、"number"、"boolean" 等。
-  * `description` (string, 可选): 参数描述。
-  * `required` (boolean, 可选): 参数是否必需。
-  * `default` (any, 可选): 参数的默认值。
-* `messages` (array of objects, 必需): 定义对话结构。每个消息对象包含：
-  * `role` (string, 必需): 发言者的角色（如 "system"、"user"、"assistant"）。
-  * `content` (string, 必需): 消息内容，可以包含 `{{parameter_name}}` 形式的参数占位符。
-* `createdAt` (string, 自动生成): 提示词创建时间。
-* `updatedAt` (string, 自动生成): 提示词最后更新时间。
-
-**示例：**
-
-```json
-{
-  "name": "general_assistant",
-  "description": "通用助手提示词，用于日常对话和问答",
-  "category": "通用",
-  "tags": ["对话", "助手", "基础"],
-  "parameters": [
-    {
-      "name": "username",
-      "type": "string",
-      "description": "用户名称",
-      "required": false,
-      "default": "用户"
-    }
-  ],
-  "messages": [
-    {
-      "role": "system",
-      "content": "你是一个有用的AI助手，能够回答{{username}}的各种问题并提供帮助。"
-    }
-  ],
-  "createdAt": "2025-05-24T14:42:31.123Z",
-  "updatedAt": "2025-05-24T14:42:31.123Z"
-}
+```yaml
+name: greeting_prompt
+description: A simple greeting prompt
+category: Examples
+tags:
+  - greeting
+  - example
+arguments:
+  - name: user_name
+    description: User's name
+    required: true
+  - name: time_of_day
+    description: Time of day (morning, afternoon, evening)
+    required: false
+messages:
+  - role: user
+    content:
+      type: text
+      text: |
+        Good {{time_of_day}}, {{user_name}}! Hope you're having a great day.
 ```
 
-### 默认提示词
+### Default Prompts
 
-MCP Prompt Server 内置了几个默认提示词：
+The MCP Prompt Server comes with several default prompts in the `src/prompts` directory, including:
 
-* `general_assistant`: 通用助手提示词，用于日常对话和问答
-* `code_assistant`: 代码助手提示词，用于编程和代码相关问题
-* `writing_assistant`: 写作助手提示词，用于文章创作和内容优化
+* `general_assistant`: A general-purpose assistant prompt for everyday conversation
+* `code_assistant`: A code assistant prompt for programming-related questions
+* `writing_assistant`: A writing assistant prompt for content creation
+* `api_documentation`: A prompt for generating API documentation
 
-## 管理功能
+## Contributing
 
-MCP Prompt Server 提供了一系列 API 管理功能，用于管理提示词、类别和标签。
-
-### 提示词管理
-
-* **获取提示词列表** (`get_prompt_names`)
-  * **输入：** 可选的类别和标签过滤器
-  * **输出：** 可用提示词名称列表
-
-* **搜索提示词** (`search_prompts`)
-  * **输入：** 搜索查询、类别过滤器、标签过滤器、分页参数
-  * **输出：** 匹配的提示词列表，包含元数据
-
-* **获取提示词详情** (`get_prompt_details`)
-  * **输入：** 要检索的提示词名称
-  * **输出：** 完整的提示词定义，包括所有元数据和消息
-
-* **添加新提示词** (`add_new_prompt`)
-  * **输入：** 完整的提示词定义
-  * **输出：** 确认提示词已添加的成功消息
-
-* **更新提示词** (`update_prompt`)
-  * **输入：** 要更新的提示词名称和更新后的提示词定义
-  * **输出：** 确认提示词已更新的成功消息
-
-* **删除提示词** (`delete_prompt`)
-  * **输入：** 要删除的提示词名称
-  * **输出：** 确认提示词已删除的成功消息
-
-### 类别和标签管理
-
-* **获取所有类别** (`get_all_categories`)
-  * **输入：** 无
-  * **输出：** 所有可用类别的列表
-
-* **获取所有标签** (`get_all_tags`)
-  * **输入：** 无
-  * **输出：** 所有可用标签的列表
+Contributions are welcome! Please feel free to open an issue on the project's repository to discuss bugs or suggest features, or submit a pull request with your improvements.
 
 ## Contributing
 

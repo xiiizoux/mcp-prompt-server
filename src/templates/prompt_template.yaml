@@ -1,0 +1,23 @@
+name: prompt_name
+description: 提示词的描述
+category: 提示词类别
+tags:
+  - 标签1
+  - 标签2
+arguments:
+  - name: parameter1
+    description: 参数一的描述
+    required: true
+  - name: parameter2
+    description: 参数二的描述
+    required: false
+messages:
+  - role: user
+    content:
+      type: text
+      text: |
+        这里是提示词的主要内容。
+        
+        可以包含参数，如 {{parameter1}} 和 {{parameter2}}。
+        
+        可以使用多行文本和格式化。
