@@ -3,8 +3,8 @@
  * 提供 HTTP 接口，用于在 Cloudflare Workers 等环境中使用
  */
 
-import { PromptService } from '../core/prompt-service';
-import { Prompt, LoadedPrompt, ToolInputArgs } from '../types';
+import { PromptService } from '../core/prompt-service.js';
+import { Prompt, LoadedPrompt, ToolInputArgs } from '../types.js';
 
 export class HttpServer {
   private promptService: PromptService;
@@ -197,8 +197,22 @@ export class HttpServer {
   /**
    * 处理提示词
    */
-  private async handleProcessPrompt(promptName: string, args: ToolInputArgs): Promise<Response> {
-    const result = await this.promptService.processPrompt(promptName, args);
+  private async handleProcessPrompt(promptName: string, args: unknown): Promise<Response> {
+    // 将 unknown 类型转换为 ToolInputArgs
+    const inputArgs: ToolInputArgs = {};
+    
+    // 如果 args 是对象，将其属性复制到 inputArgs
+    if (args && typeof args === 'object') {
+      Object.entries(args as Record<string, unknown>).forEach(([key, value]) => {
+        if (typeof value === 'string') {
+          inputArgs[key] = value;
+        } else if (value !== null && value !== undefined) {
+          inputArgs[key] = String(value);
+        }
+      });
+    }
+    
+    const result = await this.promptService.processPrompt(promptName, inputArgs);
     
     if (result.isError) {
       return this.jsonResponse({ 

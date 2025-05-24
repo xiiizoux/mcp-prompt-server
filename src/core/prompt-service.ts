@@ -3,8 +3,8 @@
  * 处理提示词的加载、处理和管理
  */
 
-import { Prompt, LoadedPrompt, ToolInputArgs, ToolOutput } from '../types';
-import { StorageInterface } from '../storage/interface';
+import { Prompt, LoadedPrompt, ToolInputArgs, ToolOutput } from '../types.js';
+import { StorageInterface } from '../storage/interface.js';
 
 export class PromptService {
   private storage: StorageInterface;

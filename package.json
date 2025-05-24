@@ -6,10 +6,11 @@
   "type": "module",
   "scripts": {
     "build": "./node_modules/.bin/tsc",
+    "build:worker": "tsc -p tsconfig.workers.json",
     "start": "npm run build && node dist/index.js",
     "dev": "nodemon src/index.js",
-    "dev:worker": "wrangler dev",
-    "deploy:worker": "wrangler publish",
+    "dev:worker": "npm run build:worker && wrangler dev",
+    "deploy:worker": "npm run build:worker && wrangler publish",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -28,7 +29,7 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20240320.1",
+    "@cloudflare/workers-types": "^4.20250524.0",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^22.15.21",
     "@types/yaml": "^1.9.7",

@@ -3,9 +3,9 @@
  * 用于在 Cloudflare Workers 环境中部署
  */
 
-import { PromptService } from './core/prompt-service';
-import { HttpServer } from './api/http-server';
-import { createStorage } from './storage/factory';
+import { PromptService } from './core/prompt-service.js';
+import { HttpServer } from './api/http-server.js';
+import { createStorage } from './storage/factory.js';
 
 export interface Env {
   // Cloudflare KV 命名空间

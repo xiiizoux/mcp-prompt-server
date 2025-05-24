@@ -6,8 +6,8 @@
 import fs from 'fs-extra';
 import path from 'path';
 import YAML from 'yaml';
-import { Prompt, LoadedPrompt } from '../types';
-import { StorageInterface } from './interface';
+import { Prompt, LoadedPrompt } from '../types.js';
+import { StorageInterface } from './interface.js';
 
 export class FileSystemStorage implements StorageInterface {
   private promptsDir: string;

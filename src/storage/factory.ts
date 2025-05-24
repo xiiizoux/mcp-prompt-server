@@ -5,16 +5,21 @@
 
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { EnvironmentType } from '../types';
-import { StorageInterface } from './interface';
-import { FileSystemStorage } from './file-system';
-import { CloudflareKVStorage } from './cloudflare-kv';
+import { EnvironmentType } from '../types.js';
+import { StorageInterface } from './interface.js';
+import { FileSystemStorage } from './file-system.js';
+import { CloudflareKVStorage } from './cloudflare-kv.js';
 
 // 获取当前环境类型
 export function getEnvironmentType(): EnvironmentType {
   // 检测是否在 Cloudflare Workers 环境中
-  if (typeof globalThis.caches !== 'undefined') {
-    return EnvironmentType.CLOUDFLARE;
+  try {
+    // 在 Cloudflare Workers 环境中，会有 self.caches
+    if (typeof self !== 'undefined' && typeof (self as any).__CLOUDFLARE__ !== 'undefined') {
+      return EnvironmentType.CLOUDFLARE;
+    }
+  } catch (e) {
+    // 忽略错误
   }
   return EnvironmentType.NODE;
 }

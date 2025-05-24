@@ -3,8 +3,8 @@
  * 使用 Cloudflare KV 存储提示词
  */
 
-import { Prompt, LoadedPrompt } from '../types';
-import { StorageInterface } from './interface';
+import { Prompt, LoadedPrompt } from '../types.js';
+import { StorageInterface } from './interface.js';
 
 export class CloudflareKVStorage implements StorageInterface {
   private namespace: KVNamespace;

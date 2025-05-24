@@ -3,7 +3,7 @@
  * 定义了提示词存储的通用接口，可以有不同的实现（文件系统、Cloudflare KV等）
  */
 
-import { Prompt, LoadedPrompt } from '../types';
+import { Prompt, LoadedPrompt } from '../types.js';
 
 export interface StorageInterface {
   /**
