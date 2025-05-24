@@ -140,33 +140,36 @@ messages:
             *   `arguments` (对象数组, 可选): 每个对象定义一个参数，包含 `name` (字符串, 必填) 和 `description` (字符串, 可选)。
             *   `messages` (对象数组, 必填): 每个对象定义一条消息，包含 `role` (字符串, 必填: "user", "assistant", 或 "system") 和 `content` (对象, 必填: `{ type: "text", text: "..." }`)。
         *   **`add_new_prompt` 的输入示例:**
-            ```json
-            {
-              "name": "custom_task_explainer",
-              "description": "根据提供的细节解释自定义任务。",
-              "arguments": [
-                { "name": "task_name", "description": "任务名称" },
-                { "name": "task_details", "description": "关于任务的具体细节" }
-              ],
-              "messages": [
-                {
-                  "role": "user",
-                  "content": {
-                    "type": "text",
-                    "text": "请解释任务 '{{task_name}}'。以下是细节: {{task_details}}"
-                  }
-                },
-                {
-                  "role": "assistant",
-                  "content": {
-                    "type": "text",
-                    "text": "好的，我将解释 {{task_name}}。"
-                  }
-                }
-              ]
-            }
+            ```yaml
+            name: custom_task_explainer
+            description: 根据提供的细节解释自定义任务。
+            arguments:
+              - name: task_name
+                description: 任务名称
+              - name: task_details
+                description: 关于任务的具体细节
+            messages:
+              - role: user
+                content:
+                  type: text
+                  text: 请解释任务 '{{task_name}}'。以下是细节: {{task_details}}
+              - role: assistant
+                content:
+                  type: text
+                  text: 好的，我将解释 {{task_name}}。
             ```
         *   **输出:** 一条成功消息，指示提示已添加并加载；如果失败，则返回错误消息。
+        *   **使用方法:**
+            1. 准备好您的提示词定义，包括名称、描述、参数和消息。
+            2. 调用 `add_new_prompt` 工具，传入您的提示词定义。
+            3. 服务器会自动创建一个新的 YAML 文件，保存到 `src/prompts` 目录。
+            4. 服务器会自动重新加载所有提示词，使新添加的提示词立即可用。
+            5. 您可以立即使用新添加的提示词，无需重启服务器。
+        *   **注意事项:**
+            * 提示词名称必须是唯一的，如果已存在同名提示词，添加操作将失败。
+            * 提示词文件将以 YAML 格式保存，与项目中的其他提示词保持一致的格式。
+            * 添加提示词后，您可以使用 `get_prompt_names` 工具验证新提示词是否已成功加载。
+            * 如果需要修改已存在的提示词，请使用 `update_prompt` 工具而不是 `add_new_prompt`。
 
 ## 贡献
 

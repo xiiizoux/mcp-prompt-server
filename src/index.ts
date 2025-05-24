@@ -34,6 +34,13 @@ const UpdatePromptSchema = z.object({
   messages: z.array(PromptMessageSchema).optional(),
 });
 
+const AddNewPromptSchema = z.object({
+  name: z.string(),
+  description: z.string().optional(),
+  arguments: z.array(PromptArgumentSchema).optional(),
+  messages: z.array(PromptMessageSchema),
+});
+
 const DeletePromptSchema = z.object({
   name: z.string(),
 });
@@ -237,8 +244,51 @@ export async function handleReloadPrompts(args: {}, extra: RequestHandlerExtra):
   };
 }
 
-export async function handleUpdatePrompt(inputArgs: z.infer<typeof UpdatePromptSchema>, extra: RequestHandlerExtra): Promise<ToolOutput> {
-  const { name, description, arguments: args, messages } = inputArgs;
+export async function handleAddNewPrompt(args: { [x: string]: any }, extra: RequestHandlerExtra): Promise<ToolOutput> {
+  const { name, description, arguments: promptArgs, messages } = args;
+  
+  // Check if prompt with this name already exists
+  const existingPromptFile = await findPromptFile(name);
+  if (existingPromptFile) {
+    return { 
+      content: [{ type: "text", text: `Prompt '${name}' already exists. Use update_prompt to modify it.` }], 
+      isError: true 
+    };
+  }
+
+  // Create a new prompt object
+  const newPrompt: LoadedPrompt = {
+    name,
+    description,
+    arguments: promptArgs,
+    messages
+  };
+
+  try {
+    // Ensure the prompts directory exists
+    await fs.ensureDir(PROMPTS_DIR);
+    
+    // Write the new prompt to a file (using YAML format)
+    const filePath = path.join(PROMPTS_DIR, `${name}.yaml`);
+    await fs.writeFile(filePath, YAML.stringify(newPrompt), 'utf8');
+    
+    // Reload the server to include the new prompt
+    await reloadServerAndTools();
+    
+    return { 
+      content: [{ type: "text", text: `Prompt '${name}' added successfully and server reloaded. Total prompts: ${loadedPrompts.length}.` }] 
+    };
+  } catch (error: any) {
+    console.error(`Error adding new prompt '${name}':`, error);
+    return { 
+      content: [{ type: "text", text: `Error adding new prompt '${name}': ${error.message}` }], 
+      isError: true 
+    };
+  }
+}
+
+export async function handleUpdatePrompt(args: { [x: string]: any }, extra: RequestHandlerExtra): Promise<ToolOutput> {
+  const { name, description, arguments: promptArgs, messages } = args;
   const filePath = await findPromptFile(name);
 
   if (!filePath) {
@@ -252,7 +302,7 @@ export async function handleUpdatePrompt(inputArgs: z.infer<typeof UpdatePromptS
     
     const updatedPromptData: Prompt = { ...promptData, name: promptData.name || name };
     if (description !== undefined) updatedPromptData.description = description;
-    if (args !== undefined) updatedPromptData.arguments = args;
+    if (promptArgs !== undefined) updatedPromptData.arguments = promptArgs;
     if (messages !== undefined) updatedPromptData.messages = messages;
 
     const outputContent = fileType === 'json' ? JSON.stringify(updatedPromptData, null, 2) : YAML.stringify(updatedPromptData);
@@ -266,8 +316,8 @@ export async function handleUpdatePrompt(inputArgs: z.infer<typeof UpdatePromptS
   }
 }
 
-export async function handleDeletePrompt(inputArgs: z.infer<typeof DeletePromptSchema>, extra: RequestHandlerExtra): Promise<ToolOutput> {
-  const { name } = inputArgs;
+export async function handleDeletePrompt(args: { [x: string]: any }, extra: RequestHandlerExtra): Promise<ToolOutput> {
+  const { name } = args;
   const filePath = await findPromptFile(name);
 
   if (!filePath) {
@@ -297,12 +347,35 @@ export async function handleGetPromptNames(args: {}, extra: RequestHandlerExtra)
  * Handlers for tools that modify prompts will call reloadServerAndTools.
  */
 function registerManagementTools(currentServer: McpServer): void {
-  currentServer.tool("reload_prompts", "Reloads all prompts from disk and reinitializes server tools.", {}, handleReloadPrompts);
-  currentServer.tool("update_prompt", "Updates an existing prompt file and reinitializes server tools.", UpdatePromptSchema, handleUpdatePrompt);
-  currentServer.tool("delete_prompt", "Deletes an existing prompt file and reinitializes server tools.", DeletePromptSchema, handleDeletePrompt);
+  // Empty schema for tools without parameters
+  const emptySchema: Record<string, ZodTypeAny> = {};
+  
+  // Convert Zod schemas to Record<string, ZodTypeAny> format
+  const addNewPromptSchema: Record<string, ZodTypeAny> = {
+    name: z.string(),
+    description: z.string().optional(),
+    arguments: z.array(PromptArgumentSchema).optional(),
+    messages: z.array(PromptMessageSchema)
+  };
+  
+  const updatePromptSchema: Record<string, ZodTypeAny> = {
+    name: z.string(),
+    description: z.string().optional(),
+    arguments: z.array(PromptArgumentSchema).optional(),
+    messages: z.array(PromptMessageSchema).optional()
+  };
+  
+  const deletePromptSchema: Record<string, ZodTypeAny> = {
+    name: z.string()
+  };
+
+  currentServer.tool("reload_prompts", "Reloads all prompts from disk and reinitializes server tools.", emptySchema, handleReloadPrompts);
+  currentServer.tool("add_new_prompt", "Adds a new prompt dynamically without manual file creation and server restart.", addNewPromptSchema, handleAddNewPrompt);
+  currentServer.tool("update_prompt", "Updates an existing prompt file and reinitializes server tools.", updatePromptSchema, handleUpdatePrompt);
+  currentServer.tool("delete_prompt", "Deletes an existing prompt file and reinitializes server tools.", deletePromptSchema, handleDeletePrompt);
   currentServer.tool(
     "get_prompt_names",
-    "获取所有可用的prompt名称", {}, handleGetPromptNames);
+    "获取所有可用的prompt名称", emptySchema, handleGetPromptNames);
 }
 
 /**
@@ -347,7 +420,7 @@ export async function reloadServerAndTools(): Promise<void> {
 
 // Exported for testing
 export const getLoadedPrompts = () => loadedPrompts;
-export { PROMPTS_DIR, UpdatePromptSchema, DeletePromptSchema };
+export { PROMPTS_DIR, UpdatePromptSchema, DeletePromptSchema, AddNewPromptSchema };
 
 
 /**

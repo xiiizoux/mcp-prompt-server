@@ -1,0 +1,24 @@
+{
+  "name": "test_greeting",
+  "description": "一个简单的问候提示词",
+  "arguments": [
+    { "name": "user_name", "description": "用户名" },
+    { "name": "time_of_day", "description": "一天中的时间 (例如: 早上, 下午)" }
+  ],
+  "messages": [
+    {
+      "role": "user",
+      "content": {
+        "type": "text",
+        "text": "{{time_of_day}}好，{{user_name}}！希望你今天过得愉快。"
+      }
+    },
+    {
+      "role": "assistant",
+      "content": {
+        "type": "text",
+        "text": "{{time_of_day}}好，{{user_name}}！有什么我可以帮助你的吗？"
+      }
+    }
+  ]
+}
