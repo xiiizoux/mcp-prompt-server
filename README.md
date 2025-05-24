@@ -2,33 +2,54 @@
 
 ## Overview
 
-The MCP Prompt Server is a pure MCP tool that provides a collection of Large Language Model (LLM) prompts as callable tools. It allows for dynamic loading of prompts from YAML files and provides tools for managing and interacting with these prompts. This tool is designed to guide AI models like Claude in performing specific tasks by providing them with structured prompts.
+The MCP Prompt Server is a versatile tool that provides a collection of Large Language Model (LLM) prompts as callable tools. It supports both local and remote deployments, with flexible storage options including local file storage and Supabase database storage. The server allows for dynamic loading of prompts and provides tools for managing and interacting with these prompts. This tool is designed to guide AI models like Claude in performing specific tasks by providing them with structured prompts.
 
 ## Features
 
-* **Dynamic Prompt Loading:** Loads prompt definitions from YAML files located in the `src/prompts` directory.
+* **Flexible Storage Options:**
+    * **File Storage:** Loads and saves prompt definitions from/to YAML files located in the `src/prompts` directory.
+    * **Supabase Storage:** Stores prompts in a Supabase PostgreSQL database for persistent storage across deployments.
+    * **Environment-based Configuration:** Easily switch between storage options using environment variables.
+* **User Authentication:**
+    * Secure user authentication via Supabase Auth.
+    * Login, registration, and logout functionality.
+    * JWT token verification for protected API routes.
 * **MCP Tool Integration:** Provides a set of MCP tools for managing prompts.
 * **Core Management Tools:**
     * `get_prompt_names`: Lists all currently available prompt names.
     * `get_prompt_details`: Retrieves detailed information about a specific prompt.
-    * `reload_prompts`: Reloads all prompt files from the disk, updating the available tools.
+    * `reload_prompts`: Reloads all prompts from the selected storage.
 * **Prompt Template Support:**
     * `get_prompt_template`: Provides a YAML template for creating new prompts.
-    * `create_prompt`: Creates new prompts from YAML content and saves them to disk.
+    * `create_prompt`: Creates new prompts and saves them to the selected storage.
 * **TypeScript-Based:** Written in TypeScript for enhanced robustness and maintainability.
+* **Deployment Options:**
+    * Local deployment with Express server.
+    * Remote deployment to Vercel with Supabase integration.
 
 ## Project Structure
 
 ```
 mcp-prompt-server/
+├── api/
+│   └── index.js         # API entry point for HTTP server
 ├── src/
 │   ├── index.ts         # Main MCP tool implementation
 │   ├── types.ts         # TypeScript type definitions
 │   ├── prompts/         # Directory containing prompt definition files (YAML)
-│   └── templates/       # Directory containing templates for new prompts
+│   ├── templates/       # Directory containing templates for new prompts
+│   └── storage/         # Storage adapters
+│       ├── file-adapter.ts    # File storage implementation
+│       └── supabase-adapter.ts # Supabase storage implementation
+├── scripts/
+│   └── switch-storage.js # Script to switch between storage options
+├── supabase/
+│   └── schema.sql       # SQL script for Supabase database setup
+├── server.js            # Express server for local deployment
 ├── mcp_config.json      # MCP configuration file
 ├── package.json         # Project metadata and dependencies
 ├── tsconfig.json        # TypeScript compiler options
+├── .env.example         # Example environment configuration
 ├── README.md            # English README
 └── README_CN.md         # Chinese README
 ```
@@ -51,6 +72,15 @@ mcp-prompt-server/
    npm install
    # or
    # pnpm install
+   ```
+
+3. Configure environment variables:
+   ```bash
+   # Copy the example environment file
+   cp .env.example .env
+   
+   # Edit the .env file to set your configuration
+   # Especially for Supabase integration
    ```
 
 ## Building the Project
@@ -123,50 +153,100 @@ The MCP Prompt Server can also be deployed to Vercel as a serverless API. This a
 
 ### API Endpoints
 
-Once deployed, the following API endpoints will be available:
+The following API endpoints are available:
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/get_prompt_names` | POST | Get all available prompt names |
-| `/api/get_prompt_details` | POST | Get details of a specific prompt |
-| `/api/reload_prompts` | POST | Reload all prompts |
-| `/api/get_prompt_template` | POST | Get the YAML template for creating new prompts |
-| `/api/create_prompt` | POST | Create a new prompt from YAML content |
-| `/api/health` | GET | Health check endpoint |
+#### Core Endpoints
+
+| Endpoint | Method | Description | Authentication Required |
+|----------|--------|-------------|------------------------|
+| `/api/health` | GET | Health check endpoint | No |
+| `/api/get_prompt_names` | POST | Get all available prompt names | No |
+| `/api/get_prompt_details` | POST | Get details of a specific prompt | No |
+| `/api/reload_prompts` | POST | Reload all prompts from the selected storage | Yes |
+| `/api/get_prompt_template` | POST | Get the YAML template for creating new prompts | No |
+| `/api/create_prompt` | POST | Create a new prompt and save it to the selected storage | Yes |
+
+#### Authentication Endpoints (Supabase Only)
+
+| Endpoint | Method | Description | Authentication Required |
+|----------|--------|-------------|------------------------|
+| `/api/auth/register` | POST | Register a new user | No |
+| `/api/auth/login` | POST | Login with email and password | No |
+| `/api/auth/logout` | POST | Logout the current user | Yes |
 
 ### API Usage Examples
 
+#### Basic Usage
+
 1. **Get Prompt Names**:
    ```bash
-   curl -X POST https://your-vercel-app.vercel.app/api/get_prompt_names
+   curl -X POST http://localhost:9010/api/get_prompt_names
    ```
 
 2. **Get Prompt Details**:
    ```bash
-   curl -X POST https://your-vercel-app.vercel.app/api/get_prompt_details \
+   curl -X POST http://localhost:9010/api/get_prompt_details \
      -H "Content-Type: application/json" \
      -d '{"name":"code_assistant"}'
    ```
 
-3. **Create Prompt**:
+#### Authentication (Supabase Only)
+
+1. **Register a New User**:
    ```bash
-   curl -X POST https://your-vercel-app.vercel.app/api/create_prompt \
+   curl -X POST http://localhost:9010/api/auth/register \
      -H "Content-Type: application/json" \
-     -d '{"name":"my_prompt","content":"name: my_prompt\ndescription: My custom prompt\nmessages:\n  - role: system\n    content: You are a helpful assistant."}'
+     -d '{"email":"user@example.com","password":"securepassword","displayName":"Example User"}'
+   ```
+
+2. **Login**:
+   ```bash
+   curl -X POST http://localhost:9010/api/auth/login \
+     -H "Content-Type: application/json" \
+     -d '{"email":"user@example.com","password":"securepassword"}'
+   ```
+   This will return a JWT token that you should use for authenticated requests.
+
+3. **Create Prompt (Authenticated)**:
+   ```bash
+   curl -X POST http://localhost:9010/api/create_prompt \
+     -H "Content-Type: application/json" \
+     -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+     -d '{"name":"my_prompt","description":"My custom prompt","category":"Custom","tags":["custom","example"],"messages":[{"role":"system","content":{"type":"text","text":"You are a helpful assistant."}}]}'
+   ```
+
+4. **Logout**:
+   ```bash
+   curl -X POST http://localhost:9010/api/auth/logout \
+     -H "Authorization: Bearer YOUR_JWT_TOKEN"
    ```
 
 ### Vercel Environment Considerations
 
-When deployed to Vercel, the MCP Prompt Server uses in-memory storage instead of file system storage, as Vercel's serverless functions operate in a read-only file system. This means:
+When deployed to Vercel, the MCP Prompt Server can use Supabase for persistent storage. This provides several advantages:
 
-- Prompts created via the API will be stored in memory and will not persist between function invocations
-- Default prompts are loaded from memory when the server starts
-- The server will automatically detect when it's running in the Vercel environment
+- **Persistent Storage**: All prompts are stored in the Supabase database and persist between function invocations.
+- **User Authentication**: Supabase provides secure authentication for API endpoints.
+- **Environment Detection**: The server automatically detects when it's running in the Vercel environment and adjusts accordingly.
+
+#### Vercel Deployment with Supabase
+
+To deploy to Vercel with Supabase integration:
+
+1. Set up your Supabase project as described in the Supabase Integration section.
+2. Add the following environment variables in your Vercel project settings:
+   - `STORAGE_TYPE=supabase`
+   - `SUPABASE_URL=https://your-project-id.supabase.co`
+   - `SUPABASE_ANON_KEY=your-anon-key`
+   - `VERCEL=1`
+3. Deploy your project to Vercel using the Vercel CLI or GitHub integration.
 
 
 ## Configuration
 
-The MCP Prompt Server is configured through the MCP configuration file (`mcp_config.json`). The main configuration is the path to the tool command:
+### MCP Configuration
+
+The MCP Prompt Server is configured through the MCP configuration file (`mcp_config.json`):
 
 ```json
 {
@@ -179,26 +259,233 @@ The MCP Prompt Server is configured through the MCP configuration file (`mcp_con
 }
 ```
 
-The prompt server will automatically load prompts from the `src/prompts` directory when it starts.
+### Environment Configuration
 
-## Development
-
-For development, you can use the following commands:
+The server can be configured using environment variables in the `.env` file:
 
 ```bash
-# Build the TypeScript code
+# Storage configuration
+# Available options: file, supabase
+STORAGE_TYPE=file
+
+# Supabase configuration
+SUPABASE_URL=https://your-project-id.supabase.co
+SUPABASE_ANON_KEY=your-anon-key
+
+# Vercel environment flag
+VERCEL=0
+
+# API server configuration
+PORT=9010
+
+# Local development configuration
+# If set to true, forces file storage even if STORAGE_TYPE=supabase
+FORCE_LOCAL_STORAGE=false
+```
+
+### Storage Options
+
+The MCP Prompt Server supports two storage options:
+
+1. **File Storage**: Stores prompts as YAML files in the `src/prompts` directory. This is suitable for local development and testing.
+
+2. **Supabase Storage**: Stores prompts in a Supabase PostgreSQL database. This is recommended for production deployments and when you need persistent storage across environments.
+
+You can switch between storage options using the provided script:
+
+```bash
+# Switch to file storage
+npm run use:file
+
+# Switch to Supabase storage
+npm run use:supabase
+```
+
+## Supabase Integration
+
+### Setting Up Supabase
+
+1. Create a Supabase account and project at [https://supabase.com](https://supabase.com).
+2. Get your Supabase URL and anon key from the project settings.
+3. Add these values to your `.env` file:
+   ```bash
+   SUPABASE_URL=https://your-project-id.supabase.co
+   SUPABASE_ANON_KEY=your-anon-key
+   STORAGE_TYPE=supabase
+   ```
+
+### Database Schema
+
+To set up the required database tables in Supabase, use the SQL script provided in the `supabase/schema.sql` file. You can copy and paste this SQL into the Supabase SQL Editor:
+
+```sql
+-- MCP Prompt Server 数据库结构
+-- 在 Supabase SQL 编辑器中执行此脚本
+
+-- 提示词表
+CREATE TABLE IF NOT EXISTS prompts (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name TEXT UNIQUE NOT NULL,
+  description TEXT,
+  category TEXT,
+  tags TEXT[],
+  messages JSONB NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 用户表（用于身份验证）
+CREATE TABLE IF NOT EXISTS users (
+  id UUID REFERENCES auth.users PRIMARY KEY,
+  email TEXT UNIQUE,
+  display_name TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 添加一些默认提示词
+INSERT INTO prompts (name, description, category, tags, messages, created_at, updated_at)
+VALUES 
+  (
+    'general_assistant',
+    '通用助手提示词，用于日常对话和问答',
+    '通用',
+    ARRAY['对话', '助手', '基础'],
+    '[{"role":"system","content":{"type":"text","text":"你是一个有用的AI助手，能够回答用户的各种问题并提供帮助。"}}]'::JSONB,
+    NOW(),
+    NOW()
+  ),
+  (
+    'code_assistant',
+    '代码助手提示词，用于编程和代码相关问题',
+    '编程',
+    ARRAY['代码', '编程', '开发'],
+    '[{"role":"system","content":{"type":"text","text":"你是一个专业的编程助手，能够帮助用户解决各种编程问题，提供代码示例和解释。\n\n请遵循以下原则：\n1. 提供清晰、简洁的代码示例\n2. 解释代码的工作原理\n3. 指出潜在的问题和优化方向\n4. 使用最佳实践和设计模式\n\n你精通多种编程语言，包括但不限于：JavaScript、TypeScript、Python、Java、C++、Go等。"}}]'::JSONB,
+    NOW(),
+    NOW()
+  )
+ON CONFLICT (name) DO NOTHING;
+```
+
+### Authentication
+
+The MCP Prompt Server includes authentication endpoints when using Supabase:
+
+- `/api/auth/register`: Register a new user
+- `/api/auth/login`: Login with email and password
+- `/api/auth/logout`: Logout the current user
+
+Protected API routes require a valid JWT token in the Authorization header.
+
+## Deployment Methods
+
+MCP Prompt Server 支持两种部署方式：本地部署（使用文件存储）和远程部署（使用 Supabase 存储）。
+
+### 1. 本地部署（使用文件存储）
+
+本地部署适合开发和测试环境，使用文件系统存储提示词。
+
+```bash
+# 切换到文件存储模式
+npm run use:file
+
+# 构建项目
 npm run build
 
-# Run the tool directly
+# 启动 HTTP 服务器
+npm run server
+```
+
+本地部署的特点：
+- 提示词存储在 `src/prompts` 目录的 YAML 文件中
+- 无需外部数据库依赖
+- 适合快速开发和测试
+- 无需身份验证
+
+### 2. 远程部署（使用 Supabase 存储）
+
+远程部署适合生产环境，使用 Supabase 数据库存储提示词，支持身份验证。
+
+#### 在本地使用 Supabase 存储
+
+```bash
+# 切换到 Supabase 存储模式
+npm run use:supabase
+
+# 构建项目
+npm run build
+
+# 启动 HTTP 服务器
+npm run server
+```
+
+#### 部署到 Vercel
+
+```bash
+# 构建项目
+npm run build
+
+# 部署到 Vercel
+vercel
+
+# 生产环境部署
+vercel --prod
+```
+
+在 Vercel 项目设置中添加以下环境变量：
+- `STORAGE_TYPE=supabase`
+- `SUPABASE_URL=https://your-project-id.supabase.co`
+- `SUPABASE_ANON_KEY=your-anon-key`
+- `VERCEL=1`
+
+远程部署的特点：
+- 提示词存储在 Supabase 数据库中
+- 支持用户身份验证
+- 提供持久化存储
+- 适合生产环境
+- 支持多环境部署（开发、测试、生产）
+
+## Running the Server
+
+无论使用哪种部署方式，您都可以通过以下两种方式运行 MCP Prompt Server：
+
+### 1. 作为 MCP 工具
+
+```bash
+# 构建 TypeScript 代码
+npm run build
+
+# 直接运行工具
 npm start
 ```
 
-After the tool starts, you'll see output similar to:
+### 2. 作为 HTTP 服务器
+
+```bash
+# 构建 TypeScript 代码
+npm run build
+
+# 启动 HTTP 服务器
+npm run server
+```
+
+After the server starts, you'll see output similar to:
 
 ```
-加载提示词目录: /path/to/mcp-prompt-server/src/prompts
-已加载 X 个提示词
-MCP Prompt Server 工具已加载
+API 存储方式: Supabase (or File)
+API 运行环境: 本地
+API 身份验证: 已启用 (when using Supabase)
+MCP Prompt Server API 运行在 http://localhost:9010
+可用端点:
+- GET  /api/health
+- POST /api/get_prompt_names
+- POST /api/get_prompt_details
+- POST /api/reload_prompts
+- POST /api/get_prompt_template
+- POST /api/create_prompt
+- POST /api/auth/login (when using Supabase)
+- POST /api/auth/register (when using Supabase)
+- POST /api/auth/logout (when using Supabase)
+```
 可用工具: get_prompt_names, get_prompt_details, reload_prompts, get_prompt_template, create_prompt
 ```
 

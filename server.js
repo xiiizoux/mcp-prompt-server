@@ -1,7 +1,7 @@
 // 本地开发服务器
 require('dotenv').config();
 const app = require('./api/index');
-const PORT = process.env.PORT || 3001; // 使用 3001 端口避免冲突
+const PORT = process.env.PORT || 9010; // 使用环境变量中的 PORT，默认为 9010
 
 // 检查环境配置
 const storageType = process.env.STORAGE_TYPE || 'file';
