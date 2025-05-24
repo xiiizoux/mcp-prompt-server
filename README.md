@@ -95,6 +95,74 @@ For development purposes, you can also run the tool directly:
 npm start
 ```
 
+## Deploying to Vercel
+
+The MCP Prompt Server can also be deployed to Vercel as a serverless API. This allows you to access the prompt server remotely via HTTP endpoints.
+
+### Deployment Steps
+
+1. Install Vercel CLI (if not already installed):
+   ```bash
+   npm install -g vercel
+   ```
+
+2. Build the project:
+   ```bash
+   npm run build
+   ```
+
+3. Deploy to Vercel:
+   ```bash
+   vercel
+   ```
+
+4. For production deployment:
+   ```bash
+   vercel --prod
+   ```
+
+### API Endpoints
+
+Once deployed, the following API endpoints will be available:
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/get_prompt_names` | POST | Get all available prompt names |
+| `/api/get_prompt_details` | POST | Get details of a specific prompt |
+| `/api/reload_prompts` | POST | Reload all prompts |
+| `/api/get_prompt_template` | POST | Get the YAML template for creating new prompts |
+| `/api/create_prompt` | POST | Create a new prompt from YAML content |
+| `/api/health` | GET | Health check endpoint |
+
+### API Usage Examples
+
+1. **Get Prompt Names**:
+   ```bash
+   curl -X POST https://your-vercel-app.vercel.app/api/get_prompt_names
+   ```
+
+2. **Get Prompt Details**:
+   ```bash
+   curl -X POST https://your-vercel-app.vercel.app/api/get_prompt_details \
+     -H "Content-Type: application/json" \
+     -d '{"name":"code_assistant"}'
+   ```
+
+3. **Create Prompt**:
+   ```bash
+   curl -X POST https://your-vercel-app.vercel.app/api/create_prompt \
+     -H "Content-Type: application/json" \
+     -d '{"name":"my_prompt","content":"name: my_prompt\ndescription: My custom prompt\nmessages:\n  - role: system\n    content: You are a helpful assistant."}'
+   ```
+
+### Vercel Environment Considerations
+
+When deployed to Vercel, the MCP Prompt Server uses in-memory storage instead of file system storage, as Vercel's serverless functions operate in a read-only file system. This means:
+
+- Prompts created via the API will be stored in memory and will not persist between function invocations
+- Default prompts are loaded from memory when the server starts
+- The server will automatically detect when it's running in the Vercel environment
+
 
 ## Configuration
 

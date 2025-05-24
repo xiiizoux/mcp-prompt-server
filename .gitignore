@@ -44,3 +44,9 @@ coverage/
 # 本地数据库文件
 *.sqlite
 *.db
+
+# Vercel 相关文件
+.vercel
+.now
+.vercel/
+.now/
